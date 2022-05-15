@@ -12,7 +12,7 @@ This feature is supported by both `resource` and `module` blocks, including 3rd 
 
 ![](./.github/assets/module-support.gif)
 
-You can 
+View a more detailed breakdown of costs on click. 
 
 ![](./.github/assets/cost-webview.gif)
 
