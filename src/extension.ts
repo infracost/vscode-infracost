@@ -148,7 +148,7 @@ export async function activate(context: vscode.ExtensionContext) {
   let disposable = vscode.commands.registerCommand('infracost.resourceBreakdown', w.show.bind(w));
 
   context.subscriptions.push(disposable);
-  languages.registerCodeLensProvider([{ scheme: 'file' }], new InfracostLensProvider(w));
+  languages.registerCodeLensProvider([{ scheme: 'file', pattern: '**/*.tf' }], new InfracostLensProvider(w));
   vscode.workspace.onDidSaveTextDocument(w.fileChange.bind(w));
 }
 
