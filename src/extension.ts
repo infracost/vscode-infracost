@@ -88,8 +88,8 @@ function registerTemplates(context: vscode.ExtensionContext) {
   Handlebars.registerHelper('repeat', (n: number, block) => {
     let accum = '';
 
-    for(var i = 0; i < n; ++i) {
-        accum += block.fn(i);
+    for (var i = 0; i < n; ++i) {
+      accum += block.fn(i);
     }
 
     return accum;
@@ -132,7 +132,7 @@ function registerTemplates(context: vscode.ExtensionContext) {
 
   Handlebars.registerHelper('filterZeroValComponents', filterZeroValComponents);
   Handlebars.registerHelper('filterZeroValResources', filterZeroValResources);
-  
+
   registerPartialFromFile('costComponentRow', context.asAbsolutePath(join('dist', costComponentRow)))
   registerPartialFromFile('emptyTableRows', context.asAbsolutePath(join('dist', emptyTableRows)))
   registerPartialFromFile('resourceRows', context.asAbsolutePath(join('dist', resourceRows)))
@@ -227,13 +227,8 @@ class Block {
   display(template: TemplateDelegate) {
     if (this.webview !== undefined) {
       this.webview.webview.html = template(this);
-      try {
-        this.webview.reveal();
-        return;
-      } catch (error) {
-        // do nothing this is expected with a disposed webview.
-        // we just load a new webview below.
-      }
+      this.webview.reveal();
+      return;
     }
 
     const wp = vscode.window.createWebviewPanel(
@@ -250,6 +245,11 @@ class Block {
     )
     this.webview = wp;
     this.webview.webview.html = template(this);
+
+    this.webview.onDidDispose(e => {
+      this.webview = undefined;
+    });
+
     this.webview.reveal();
   }
 }
