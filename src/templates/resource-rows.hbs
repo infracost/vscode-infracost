@@ -1,0 +1,24 @@
+{{#if (eq indent 0)}}
+    <tr class="resource top-level">
+{{else}}
+    <tr class="resource">
+{{/if}}
+    <td class="name">
+        {{#if (gt indent 1)}}
+            {{#repeat (add indent -1)}}
+              <span>&nbsp;&nbsp;</span>
+            {{/repeat}}
+        {{/if}}
+        {{#if (gt indent 0)}}
+            <span class="arrow">&#8627;</span>
+        {{/if}}
+        {{resource.name}}
+    </td>
+    {{> emptyTableRows}}
+</tr>
+{{#each resource.costComponents}}
+    {{> costComponentRow currency=../currency costComponent=. indent=(increment ../indent)}}
+{{/each}}
+{{#each resource.subresources}}
+    {{> resourceRows currency=../currency resource=. indent=(increment ../indent)}}
+{{/each}}

@@ -1,0 +1,156 @@
+<style>
+    body {
+        margin: 0;
+        padding: 0.5rem 1rem;
+        font-family: var(--vscode-editor-font-family);
+        font-weight: var(--vscode-editor-font-weight);
+        font-size: var(--vscode-editor-font-size);
+    }
+
+    body.vscode-light {
+        color: #111827;
+    }
+
+    body.vscode-dark {
+        color: #2aa198;
+    }
+
+    body.vscode-high-contrast {
+        color: #ce9178;
+    }
+
+    body.vscode-high-contrast .arrow {
+        color: #9cdcfe;
+    }
+
+    table {
+        border: 1px solid #6b7280;
+        border-collapse: collapse;
+    }
+
+    body.vscode-high-contrast table {
+        border-color: #4ec9b0; 
+    }
+
+    body.vscode-dark table {
+        border-color: #268bd2;
+    }
+
+    body.vscode-dark .resource.top-level,  body.vscode-dark .total {
+        background-color: #268bd2;
+        color: white;
+    }
+
+    body.vscode-high-contrast .resource.top-level,  body.vscode-high-contrast .total {
+        background-color: #4ec9b0; 
+        color: white;
+    }
+
+    body.vscode-high-contrast .resource {
+        background-color: #b5cea8;
+        color: white;
+    }
+
+    body.vscode-high-contrast .resource .arrow {
+        color: white;
+    }
+
+    body.vscode-dark .resource {
+        background-color: #859900;
+        color: white;
+    }
+
+    body.vscode-dark .resource .arrow {
+        color: white;
+    }
+
+    body.vscode-light table {
+        border-color: #098658;
+    }
+
+    body.vscode-light .resource.top-level,  body.vscode-light .total {
+        background-color:  #098658; 
+        color: white;
+    }
+
+    body.vscode-light .arrow {
+        color: #0431fa;
+    }
+
+    body.vscode-light .usage-cost {
+        color: #838894;
+    }
+
+    body.vscode-dark .usage-cost {
+        color: #838894;
+    }
+
+    body.vscode-high-contrast .usage-cost {
+        color: #cea08d;
+    }
+
+    body.vscode-dark .arrow {
+        color: #9cdcfe;
+    }
+
+    th,
+    td {
+        padding: 0.25rem 0.5rem;
+        text-align: left;
+    }
+
+    td.name {
+        max-width: 25rem;
+    }
+
+    td.monthly-quantity,
+    td.price,
+    td.hourly-cost,
+    td.monthly-cost {
+        text-align: right;
+    }
+
+    tr.total {
+        font-weight: bold;
+    }
+
+    table.overall-total tr.total {
+        background-color: #ffdfb9;
+        font-weight: bold;
+    }
+
+    table.overall-total tr.total td {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .usage-cost {
+       text-align: right;
+    }
+
+    table.breakdown,
+    table.overall-total {
+        width: 100%;
+    }
+
+    table.overall-total {
+        margin-top: 1rem;
+    }
+</style>
+
+<div class="container">
+    <table class="breakdown">
+        <thead>
+            {{> tableHeaders currency=currency }}
+        </thead>
+        <tbody>
+            {{#each resources}}
+            {{> resourceRows currency=../currency indent=0 resource=.}}
+            {{/each}}
+            <tr class="total">
+                <td class="name" colspan="5">Block total</td>
+                <td class="monthly-cost">{{blockCost .}}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
