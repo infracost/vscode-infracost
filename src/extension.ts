@@ -139,8 +139,6 @@ function registerTemplates(context: vscode.ExtensionContext) {
   registerPartialFromFile('tableHeaders', context.asAbsolutePath(join('dist', tableHeader)))
 }
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
   registerTemplates(context)
   const template = await compileTemplateFromFile(context.asAbsolutePath(join('dist', blockOutput)));
@@ -316,7 +314,7 @@ class Workspace {
 
   async run(path: string): Promise<infracostJSON.RootObject | undefined> {
     try {
-      const cmd = `/Users/hugorut/code/infracost/infracost/build/infracost breakdown --path ${path} --format json --log-level info`
+      const cmd = `infracost breakdown --path ${path} --format json --log-level info`
       const { stdout, stderr } = await util.promisify(exec)(cmd);
       const body = <infracostJSON.RootObject>JSON.parse(stdout);
 
@@ -417,13 +415,9 @@ function is<T extends object>(o: object, propOrMatcher?: keyof T | ((o: any) => 
   return value === undefined ? (o as any)[propOrMatcher] !== undefined : (o as any)[propOrMatcher] === value;
 }
 
-// this method is called when your extension is deactivated
-export function deactivate() {
-}
-
+export function deactivate() {}
 
 declare module infracostJSON {
-
   export interface Metadata {
     path: string;
     type: string;
@@ -510,6 +504,5 @@ declare module infracostJSON {
     timeGenerated: Date;
     summary: Summary;
   }
-
 }
 
