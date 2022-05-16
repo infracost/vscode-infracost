@@ -13,10 +13,8 @@
     {{#if costComponent.monthlyCost}}
         <td class="monthly-quantity">{{costComponent.monthlyQuantity}}</td>
         <td class="unit">{{costComponent.unit}}</td>
-        <td class="price">{{formatPrice currency costComponent.price}}</td>
-        <td class="hourly-cost">{{formatPrice currency costComponent.hourlyCost}}</td>
         <td class="monthly-cost">{{formatPrice currency costComponent.monthlyCost}}</td>
     {{else}}
-      <td colspan="5" class="usage-cost">Cost depends on usage: {{formatPrice currency costComponent.price}} per {{costComponent.unit}}</td>
+      <td colspan="3" class="usage-cost">Cost depends on usage: {{formatPrice currency costComponent.price}} per {{costComponent.unit}}</td>
     {{/if}}
   </tr>
