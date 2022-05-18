@@ -138,10 +138,28 @@ function registerTemplates(context: vscode.ExtensionContext) {
   registerPartialFromFile('tableHeaders', context.asAbsolutePath(join('dist', tableHeader)))
 }
 
+
+async function isInfracostInstalled(): Promise<boolean> {
+  try {
+    const cmd = `infracost --help`
+    await util.promisify(exec)(cmd);
+  } catch (error) {
+    return false
+  }
+
+  return true;
+}
+
 export async function activate(context: vscode.ExtensionContext) {
   infracostStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   context.subscriptions.push(infracostStatusBar);
   setInfracostStatusLoading()
+
+  if (!await isInfracostInstalled()) {
+    vscode.window.showErrorMessage('The infracost cmd was not found on this machine. Please install it: https://www.infracost.io/docs/#1-install-infracost.')
+    setInfracostReadyStatus()
+    return
+  }
 
   registerTemplates(context)
   const template = await compileTemplateFromFile(context.asAbsolutePath(join('dist', blockOutput)));
