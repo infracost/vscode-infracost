@@ -22,7 +22,8 @@ import resourceRows from './templates/resource-rows.hbs';
 import blockOutput from './templates/block-output.hbs';
 import { join } from 'path';
 
-const Handlebars = create()
+const Handlebars = create();
+let infracostStatusBar: vscode.StatusBarItem;
 
 function filterZeroValComponents(costComponents: infracostJSON.CostComponent[]): infracostJSON.CostComponent[] {
   if (costComponents === undefined) {
@@ -138,6 +139,10 @@ function registerTemplates(context: vscode.ExtensionContext) {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+  infracostStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  context.subscriptions.push(infracostStatusBar);
+  setInfracostStatusLoading()
+
   registerTemplates(context)
   const template = await compileTemplateFromFile(context.asAbsolutePath(join('dist', blockOutput)));
   const w = new Workspace(template);
@@ -148,6 +153,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(disposable);
   languages.registerCodeLensProvider([{ scheme: 'file', pattern: '**/*.tf' }], new InfracostLensProvider(w));
   vscode.workspace.onDidSaveTextDocument(w.fileChange.bind(w));
+  setInfracostReadyStatus()
 }
 
 class Project {
@@ -264,12 +270,12 @@ class Workspace {
   async init() {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders?.length === 0) {
-      console.error('Could not run Infracost in workspace, please try setting the project path directly');
+      vscode.window.showErrorMessage('Infracost could not detect a valid worspace to run within. Please try opening another project. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.');
       return;
     }
 
     const root = folders[0].uri.fsPath.toString();
-    await this.run(root);
+    await this.run(root, true);
   }
 
   show(block: Block) {
@@ -277,12 +283,14 @@ class Workspace {
   }
 
   async fileChange(file: vscode.TextDocument) {
+    setInfracostStatusLoading();
     this.loading = true;
     this.codeLensEventEmitter.fire();
 
     const filename = file.uri.path;
     const projects = this.filesToProjects[filename];
     if (projects === undefined) {
+      setInfracostReadyStatus();
       return {};
     }
 
@@ -291,6 +299,7 @@ class Workspace {
     }
 
     this.loading = false;
+    setInfracostReadyStatus();
     this.codeLensEventEmitter.fire();
   }
 
@@ -310,7 +319,7 @@ class Workspace {
     return {};
   }
 
-  async run(path: string): Promise<infracostJSON.RootObject | undefined> {
+  async run(path: string, init: boolean = false): Promise<infracostJSON.RootObject | undefined> {
     try {
       const cmd = `infracost breakdown --path ${path} --format json --log-level info`
       const { stdout, stderr } = await util.promisify(exec)(cmd);
@@ -334,7 +343,13 @@ class Workspace {
 
       return body;
     } catch (error) {
-      console.error('Could not run Infracost in workspace, please try setting the project path directly');
+      console.error(`Infracost cmd error trace ${error}`);
+
+      if (init) {
+        vscode.window.showErrorMessage(`Could not run the infracost cmd in the ${path} directory. If this is a multi-project workspace please try opening just a single project. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
+      } else {
+        vscode.window.showErrorMessage(`Error fetching cloud costs with Infracost, please run again. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
+      }
     }
 
     return undefined;
@@ -413,7 +428,17 @@ function is<T extends object>(o: object, propOrMatcher?: keyof T | ((o: any) => 
   return value === undefined ? (o as any)[propOrMatcher] !== undefined : (o as any)[propOrMatcher] === value;
 }
 
-export function deactivate() {}
+function setInfracostStatusLoading() {
+  infracostStatusBar.text = '$(sync~spin) Infracost';
+  infracostStatusBar.show();
+}
+
+function setInfracostReadyStatus() {
+  infracostStatusBar.text = '$(cloud) Infracost';
+  infracostStatusBar.show();
+}
+
+export function deactivate() { }
 
 declare module infracostJSON {
   export interface Metadata {
