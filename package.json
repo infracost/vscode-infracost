@@ -1,14 +1,28 @@
 {
 	"name": "infracost",
-	"displayName": "infracost",
+	"displayName": "Infracost",
 	"description": "Cloud cost estimates for Terraform in your editor",
-	"version": "0.0.1",
+	"version": "0.1.0",
+	"publisher": "Infracost",
+	"license": "Apache-2.0",
+	"icon": "infracost-logo.png",
 	"engines": {
 		"vscode": "^1.67.0"
 	},
 	"categories": [
-		"Other"
+		"Other",
+		"Formatters",
+		"Linters"
 	],
+	"keywords": [
+		"devops",
+		"terraform",
+		"hcl"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/infracost/vscode-infracost.git"
+	},
 	"activationEvents": [
 		"onStartupFinished"
 	],
@@ -22,7 +36,7 @@
 		]
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run package",
+		"vscode:package": "vsce package --yarn",
 		"compile": "webpack",
 		"watch": "webpack --watch",
 		"package": "webpack --mode production --devtool hidden-source-map",
