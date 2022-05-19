@@ -151,6 +151,12 @@ async function isInfracostInstalled(): Promise<boolean> {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+  const terraformExtension = vscode.extensions.getExtension('HashiCorp.terraform');
+  if (terraformExtension === undefined) {
+    vscode.window.showErrorMessage('The Hashicorp Terraform extension is required for the Infracost extension to work. Please install it: https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform.')
+    return;
+  }
+
   infracostStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   context.subscriptions.push(infracostStatusBar);
   setInfracostStatusLoading()
