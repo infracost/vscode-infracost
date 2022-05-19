@@ -23,7 +23,7 @@ jobs:
       - name: Install
         run: yarn
       - name: Package extension
-        run: yan vscode:package
+        run: yarn vscode:package
       # - name: Publish Extension
       #   run: yarn vsce publish --yarn --packagePath ./${{ env.PACKAGE_NAME }}.vsix -p ${{ secrets.MARKETPLACE_PAT }}
       - name: Create GitHub release
