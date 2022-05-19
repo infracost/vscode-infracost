@@ -23,7 +23,17 @@ import blockOutput from './templates/block-output.hbs';
 import { join } from 'path';
 
 const Handlebars = create();
+
+/**
+ * infracostStatusBar is a vscode status bar that sits on the bottom of the vscode editor.
+ * This is used to show loading to the user.
+ */
 let infracostStatusBar: vscode.StatusBarItem;
+
+/**
+ * webviews is a lookup map of open webviews. This is used by blocks to update the view contents.
+ */
+let webviews: { [key: string]: vscode.WebviewPanel };
 
 function filterZeroValComponents(costComponents: infracostJSON.CostComponent[]): infracostJSON.CostComponent[] {
   if (costComponents === undefined) {
@@ -157,6 +167,9 @@ export async function activate(context: vscode.ExtensionContext) {
     return;
   }
 
+  // reset the webviews
+  webviews = {};
+
   infracostStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   context.subscriptions.push(infracostStatusBar);
   setInfracostStatusLoading()
@@ -183,16 +196,18 @@ export async function activate(context: vscode.ExtensionContext) {
 class Project {
   name: string;
   currency: string;
+  template: TemplateDelegate;
   files: { [key: string]: File } = {};
 
-  constructor(name: string, currency: string) {
+  constructor(name: string, currency: string, template: TemplateDelegate) {
     this.name = name;
     this.currency = currency;
+    this.template = template;
   }
 
   file(name: string): File {
     if (this.files[name] === undefined) {
-      this.files[name] = new File(name, this.currency);
+      this.files[name] = new File(name, this.currency, this.template);
     }
 
     return this.files[name];
@@ -202,16 +217,18 @@ class Project {
 class File {
   name: string;
   currency: string;
+  template: TemplateDelegate;
   blocks: { [key: string]: Block } = {};
 
-  constructor(name: string, currency: string) {
+  constructor(name: string, currency: string, template: TemplateDelegate) {
     this.name = name;
     this.currency = currency;
+    this.template = template;
   }
 
   block(name: string): Block {
     if (this.blocks[name] === undefined) {
-      this.blocks[name] = new Block(name, this.name, this.currency);
+      this.blocks[name] = new Block(name, this.name, this.currency, this.template);
     }
 
     return this.blocks[name];
@@ -222,13 +239,27 @@ class Block {
   name: string;
   filename: string;
   currency: string;
+  template: TemplateDelegate;
   resources: infracostJSON.Resource[] = [];
   webview: vscode.WebviewPanel | undefined;
 
-  constructor(name: string, filename: string, currency: string) {
+  constructor(name: string, filename: string, currency: string, template: TemplateDelegate) {
     this.name = name;
     this.filename = filename;
     this.currency = currency;
+    this.template = template;
+
+    if (webviews[this.key()] !== undefined) {
+      this.webview = webviews[this.key()];
+      this.webview.onDidDispose(e => {
+        this.webview = undefined;
+        delete webviews[this.key()];
+      });
+    }
+  }
+
+  key(): string {
+    return this.filename + '|' + this.name;
   }
 
   cost(): string {
@@ -250,9 +281,9 @@ class Block {
     return formatter.format(cost);
   }
 
-  display(template: TemplateDelegate) {
+  display() {
     if (this.webview !== undefined) {
-      this.webview.webview.html = template(this);
+      this.webview.webview.html = this.template(this);
       this.webview.reveal();
       return;
     }
@@ -270,10 +301,12 @@ class Block {
       }
     )
     this.webview = wp;
-    this.webview.webview.html = template(this);
+    webviews[this.filename + '|' + this.name] = wp;
+    this.webview.webview.html = this.template(this);
 
     this.webview.onDidDispose(e => {
       this.webview = undefined;
+      delete webviews[this.key()];
     });
 
     this.webview.reveal();
@@ -294,7 +327,6 @@ class Workspace {
   async init() {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders?.length === 0) {
-      vscode.window.showErrorMessage('Infracost could not detect a valid worspace to run within. Please try opening another project. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.');
       return;
     }
 
@@ -303,7 +335,7 @@ class Workspace {
   }
 
   show(block: Block) {
-    block.display(this.blockTemplate);
+    block.display();
   }
 
   async fileChange(file: vscode.TextDocument) {
@@ -351,10 +383,10 @@ class Workspace {
 
       for (const project of body.projects) {
         const projectPath = project.metadata.path;
-        this.projects[projectPath] = new Project(projectPath, body.currency);
+        const formatted = new Project(projectPath, body.currency, this.blockTemplate);
         for (const resource of project.breakdown.resources) {
           for (const call of resource.metadata.calls) {
-            this.projects[projectPath].file(call.filename).block(call.blockName).resources.push(resource);
+            formatted.file(call.filename).block(call.blockName).resources.push(resource);
 
             if (this.filesToProjects[call.filename] === undefined) {
               this.filesToProjects[call.filename] = {};
@@ -362,6 +394,13 @@ class Workspace {
 
             this.filesToProjects[call.filename][projectPath] = true;
           }
+        }
+
+        // reload the webviews after the save
+        this.projects[projectPath] = formatted;
+        for (const key in webviews) {
+          const [filename, blockname] = key.split('|');
+          formatted.file(filename).block(blockname).display();
         }
       }
 
