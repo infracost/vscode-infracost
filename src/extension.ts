@@ -308,6 +308,11 @@ class Workspace {
   }
 
   async fileChange(file: vscode.TextDocument) {
+    const isTfFile = /.*\.tf$/.test(file.fileName)
+    if (!isTfFile) {
+      return;
+    }
+
     setInfracostStatusLoading();
     this.loading = true;
     this.codeLensEventEmitter.fire();
