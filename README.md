@@ -21,7 +21,7 @@ If a simple monthly cost isn't enough for you, just click the overview to show a
 
 Check out the video below to see the Infracost extension in action!
 
-[![VSCode Infracost Demo]()](https://www.loom.com/share/b7cdf9052b604e5cb3bc5a90258a3db6)
+https://user-images.githubusercontent.com/6455139/169564807-320bbbf7-647f-4248-882f-2a6bbf9449b2.mp4
 
 ## Requirements
 
