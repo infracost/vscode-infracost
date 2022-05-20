@@ -11,7 +11,7 @@ import {
   languages,
   Position,
   SymbolInformation,
-  TextDocument,
+  TextDocument
 } from 'vscode';
 import { create, TemplateDelegate } from 'handlebars';
 import { readFile } from 'fs/promises';
@@ -21,6 +21,7 @@ import emptyTableRows from './templates/empty-table-rows.hbs';
 import resourceRows from './templates/resource-rows.hbs';
 import blockOutput from './templates/block-output.hbs';
 import { join } from 'path';
+import { gte } from 'semver';
 
 const Handlebars = create();
 
@@ -34,39 +35,6 @@ let infracostStatusBar: vscode.StatusBarItem;
  * webviews is a lookup map of open webviews. This is used by blocks to update the view contents.
  */
 let webviews: { [key: string]: vscode.WebviewPanel };
-
-function filterZeroValComponents(costComponents: infracostJSON.CostComponent[]): infracostJSON.CostComponent[] {
-  if (costComponents === undefined) {
-    return [];
-  }
-
-  const filtered = costComponents.filter((c: infracostJSON.CostComponent) => {
-    if (c.monthlyCost != null && c.monthlyCost != 0) {
-      return true;
-    }
-
-    return false;
-  });
-
-  return filtered;
-}
-
-function filterZeroValResources(resources: infracostJSON.Resource[]): infracostJSON.Resource[] {
-  if (resources === undefined) {
-    return [];
-  }
-
-  return resources.filter((r: infracostJSON.Resource) => {
-    const filteredComponents = filterZeroValComponents(r.costComponents);
-    const filteredResources = filterZeroValResources(r.subresources);
-
-    if (filteredComponents.length === 0 && filteredResources.length === 0) {
-      return false;
-    }
-
-    return true;
-  })
-}
 
 function registerPartialFromFile(name: string, filename: string) {
   readFile(filename).then(data => {
@@ -139,9 +107,6 @@ function registerTemplates(context: vscode.ExtensionContext) {
     return block.cost();
   })
 
-  Handlebars.registerHelper('filterZeroValComponents', filterZeroValComponents);
-  Handlebars.registerHelper('filterZeroValResources', filterZeroValResources);
-
   registerPartialFromFile('costComponentRow', context.asAbsolutePath(join('dist', costComponentRow)))
   registerPartialFromFile('emptyTableRows', context.asAbsolutePath(join('dist', emptyTableRows)))
   registerPartialFromFile('resourceRows', context.asAbsolutePath(join('dist', resourceRows)))
@@ -149,21 +114,31 @@ function registerTemplates(context: vscode.ExtensionContext) {
 }
 
 
-async function isInfracostInstalled(): Promise<boolean> {
-  try {
-    const cmd = `infracost --help`
-    await util.promisify(exec)(cmd);
-  } catch (error) {
-    return false
-  }
-
-  return true;
-}
-
-export async function activate(context: vscode.ExtensionContext) {
+async function isExtensionValid(): Promise<boolean> {
   const terraformExtension = vscode.extensions.getExtension('HashiCorp.terraform');
   if (terraformExtension === undefined) {
     vscode.window.showErrorMessage('The Hashicorp Terraform extension is required for the Infracost extension to work. Please install it: https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform.')
+    return false;
+  }
+
+  try {
+    const cmd = `infracost --version`
+    const { stdout } = await util.promisify(exec)(cmd);
+    const version = stdout.replace('Infracost ', '')
+    if (!gte(version, '0.10.0')) {
+      vscode.window.showErrorMessage(`The Infracost extension requires at least version v0.10.0 of the CLI. Please upgrade your CLI.`)
+      return false;
+    }
+  } catch (error) {
+    vscode.window.showErrorMessage('The Infracost extension requires the Infracost CLI to function. Please install it: https://www.infracost.io/docs/#1-install-infracost.')
+    return false
+  }
+
+  return true
+}
+
+export async function activate(context: vscode.ExtensionContext) {
+  if (!await isExtensionValid()) {
     return;
   }
 
@@ -173,12 +148,6 @@ export async function activate(context: vscode.ExtensionContext) {
   infracostStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   context.subscriptions.push(infracostStatusBar);
   setInfracostStatusLoading()
-
-  if (!await isInfracostInstalled()) {
-    vscode.window.showErrorMessage('The infracost cmd was not found on this machine. Please install it: https://www.infracost.io/docs/#1-install-infracost.')
-    setInfracostReadyStatus()
-    return
-  }
 
   registerTemplates(context)
   const template = await compileTemplateFromFile(context.asAbsolutePath(join('dist', blockOutput)));
@@ -501,7 +470,8 @@ function setInfracostReadyStatus() {
   infracostStatusBar.show();
 }
 
-export function deactivate() { }
+export function deactivate() {
+}
 
 declare module infracostJSON {
   export interface Metadata {
