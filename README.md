@@ -33,7 +33,7 @@ We love any kind of contribution, big or small.
 To get the Infracost extension working locally:
 
 1. Clone the repo.
-2. `npm install` all the dependencies.
+2. `yarn` install all the dependencies.
 3. Open the repo in VSCode.
 4. Make sure the [Terraform VSCode extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) is installed.
 5. Inside the editor, press F5. This will compile and run the extension in a new Extension Development Host window.
