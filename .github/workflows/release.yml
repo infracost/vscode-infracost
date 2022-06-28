@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Release
@@ -33,5 +36,6 @@ jobs:
           files: ./${{ env.PACKAGE_NAME }}.vsix
           tag_name: ${{ github.ref }}
           name: v${{ env.PACKAGE_VERSION }}
-          draft: false
+          draft: true
+          generate_release_notes: true
           prerelease: false
