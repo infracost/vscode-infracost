@@ -6,16 +6,16 @@ Infracost's VSCode extension shows you cost estimates for Terraform right in you
 
 Infracost's extension shows a snapshot of the total cost of resources right above their Terraform definitions. Infracost's output updates on file save.
 
-![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/resource-costs.gif?raw=true)
+![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/resources.gif?raw=true)
 
 Both `resource` and `module` blocks support showing cost estimates. Infracost's VSCode extension even supports showing prices on **3rd party module blocks**! 
 
 
-![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/module-support.gif?raw=true)
+![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/modules.gif?raw=true)
 
 If a simple monthly cost isn't enough for you, just click the overview to show a detailed breakdown of what components affect the price.
 
-![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/cost-webview.gif?raw=true)
+![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/webview.gif?raw=true)
 
 ## Demo
 
