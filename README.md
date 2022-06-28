@@ -21,8 +21,19 @@ If a simple monthly cost isn't enough for you, just click the overview to show a
 
 Check out the video below to see the Infracost extension in action!
 
-https://user-images.githubusercontent.com/6455139/169564807-320bbbf7-647f-4248-882f-2a6bbf9449b2.mp4
+[![Extension Demo](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/videooverlay.png?raw=true))](https://user-images.githubusercontent.com/6455139/169564807-320bbbf7-647f-4248-882f-2a6bbf9449b2.mp4)
 
+
+## Getting started
+
+1. Install [Infracost CLI](https://www.infracost.io/docs/#1-install-infracost) on your machine & register for an API key.
+2. Open VSCode and install the [Hashicorp Terraform extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform).
+   ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/terraform-install.png?raw=true)
+3. Then install the [Infracost extension](https://marketplace.visualstudio.com/items?itemName=Infracost.infracost).
+   ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/infracost-install.png?raw=true)
+4. Navigate to any Terraform file, if you've done the prior steps correctly you'll see costs above [supported blocks](https://www.infracost.io/docs/supported_resources/overview/).
+   ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/maintf.png?raw=true)
+  
 ## Requirements
 
 The Infracost VSCode extension requires you to have:
