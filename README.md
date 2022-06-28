@@ -4,7 +4,7 @@ Infracost's VSCode extension shows you cost estimates for Terraform right in you
 
 ## Features
 
-Infracost's extension shows a snapshot of the total cost of resources right next to their Terraform definitions. Infracost's output updates on file save.
+Infracost's extension shows a snapshot of the total cost of resources right above their Terraform definitions. Infracost's output updates on file save.
 
 ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/resource-costs.gif?raw=true)
 
@@ -25,7 +25,7 @@ https://user-images.githubusercontent.com/6455139/169564807-320bbbf7-647f-4248-8
 
 ## Requirements
 
-The Infracost VSCode extension requires you have:
+The Infracost VSCode extension requires you to have:
 
 * VSCode **v1.67.0** or above.
 * Infracost CLI version **v0.10.6** or above [installed](https://www.infracost.io/docs) and registered with a valid API key.
