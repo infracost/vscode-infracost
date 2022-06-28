@@ -27,8 +27,8 @@ https://user-images.githubusercontent.com/6455139/169564807-320bbbf7-647f-4248-8
 
 The Infracost VSCode extension requires you have:
 
-* VSCode version v1.67.0 or above.
-* Infracost CLI version v0.10.0 or above [installed](https://www.infracost.io/docs) and registered with a valid API key.
+* VSCode **v1.67.0** or above.
+* Infracost CLI version **v0.10.6** or above [installed](https://www.infracost.io/docs) and registered with a valid API key.
 * The [Terraform VSCode extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) installed and enabled in VSCode.
 
 ## Known Issues
