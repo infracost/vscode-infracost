@@ -32,6 +32,6 @@ jobs:
         with:
           files: ./${{ env.PACKAGE_NAME }}.vsix
           tag_name: ${{ github.ref }}
-          release_name: v${{ env.PACKAGE_VERSION }}
+          name: v${{ env.PACKAGE_VERSION }}
           draft: false
           prerelease: false
