@@ -125,8 +125,8 @@ async function isExtensionValid(): Promise<boolean> {
     const cmd = `infracost --version`
     const { stdout } = await util.promisify(exec)(cmd);
     const version = stdout.replace('Infracost ', '')
-    if (!gte(version, '0.10.0')) {
-      vscode.window.showErrorMessage(`The Infracost extension requires at least version v0.10.0 of the CLI. Please upgrade your CLI.`)
+    if (!gte(version, '0.10.6')) {
+      vscode.window.showErrorMessage(`The Infracost extension requires at least version v0.10.6 of the CLI. Please upgrade your CLI.`)
       return false;
     }
   } catch (error) {
@@ -351,7 +351,7 @@ class Workspace {
 
   async run(path: string, init: boolean = false): Promise<infracostJSON.RootObject | undefined> {
     try {
-      const cmd = `infracost breakdown --path ${path} --format json --log-level info`
+      const cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path ${path} --format json --log-level info`
       const { stdout, stderr } = await util.promisify(exec)(cmd);
       const body = <infracostJSON.RootObject>JSON.parse(stdout);
 
