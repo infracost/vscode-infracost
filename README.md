@@ -6,16 +6,16 @@ Infracost's VSCode extension shows you cost estimates for Terraform right in you
 
 Infracost's extension shows a snapshot of the total cost of resources right next to their Terraform definitions. Infracost's output updates on file save.
 
-![](./.github/assets/resource-costs.gif)
+![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/resource-costs.gif)
 
 Both `resource` and `module` blocks support showing cost estimates. Infracost's VSCode extension even supports showing prices on **3rd party module blocks**! 
 
 
-![](./.github/assets/module-support.gif)
+![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/module-support.gif)
 
 If a simple monthly cost isn't enough for you, just click the overview to show a detailed breakdown of what components affect the price.
 
-![](./.github/assets/cost-webview.gif)
+![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/cost-webview.gif)
 
 ## Demo
 
@@ -33,8 +33,12 @@ The Infracost VSCode extension requires you have:
 
 ## Known Issues
 
-* Infracost usage files are not yet supported
-* Diff functionality is not yet supported
+* Infracost [usage files](https://www.infracost.io/docs/features/usage_based_resources/) are not yet supported. This means that resources that solely use usage costs will have a `0.00` cost shown:
+  
+  ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/zero-cost.png)
+* [Diff functionality](https://www.infracost.io/docs/features/cli_commands/#diff) is not yet supported.
+* VSCode Infracost does not yet work with Infracost [config files](https://www.infracost.io/docs/features/config_file/). Multi project support is available using Infracost native auto-detection.
+  This means that the first time running in a multi-project workspace might be quite slow.
 
 ## Contributing
 
