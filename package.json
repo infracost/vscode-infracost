@@ -2,7 +2,7 @@
 	"name": "infracost",
 	"displayName": "Infracost",
 	"description": "Cloud cost estimates for Terraform in your editor",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"publisher": "Infracost",
 	"license": "Apache-2.0",
 	"icon": "infracost-logo.png",
@@ -24,7 +24,7 @@
 		"url": "https://github.com/infracost/vscode-infracost.git"
 	},
 	"activationEvents": [
-		"onStartupFinished"
+		"workspaceContains:**/*.tf"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
