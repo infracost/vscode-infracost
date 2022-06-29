@@ -385,7 +385,7 @@ class Workspace {
       if (init) {
         vscode.window.showErrorMessage(`Could not run the infracost cmd in the ${path} directory. If this is a multi-project workspace please try opening just a single project. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
       } else {
-        vscode.window.showErrorMessage(`Error fetching cloud costs with Infracost, please run again. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
+        vscode.window.showErrorMessage(`Error fetching cloud costs with Infracost, please run again by saving the file or reopening the Workspace. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
       }
     }
 
