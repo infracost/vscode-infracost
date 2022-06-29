@@ -126,7 +126,7 @@ async function isExtensionValid(): Promise<boolean> {
     const { stdout } = await util.promisify(exec)(cmd);
     const version = stdout.replace('Infracost ', '')
     if (!gte(version, '0.10.6')) {
-      vscode.window.showErrorMessage(`The Infracost extension requires at least version v0.10.6 of the CLI. Please upgrade your CLI.`)
+      vscode.window.showErrorMessage(`The Infracost extension requires at least version v0.10.6 of the Infracost CLI. Please upgrade your CLI.`)
       return false;
     }
   } catch (error) {
