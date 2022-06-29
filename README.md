@@ -42,7 +42,9 @@ The Infracost VSCode extension requires you to have:
 * Infracost CLI version **v0.10.6** or above [installed](https://www.infracost.io/docs) and registered with a valid API key.
 * The [Terraform VSCode extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) installed and enabled in VSCode.
 
-## Known Issues
+## Troubleshooting
+
+### Known Issues
 
 * When opening a workspace with a large number of Terraform projects for the first time. Infracost will evaluate all the projects and download any required modules. This means
   that it might take some time before pricing information is available. If you're worried that Infracost VSCode extension isn't working in your workspace but haven't got
@@ -54,11 +56,21 @@ The Infracost VSCode extension requires you to have:
 * Infracost [usage files](https://www.infracost.io/docs/features/usage_based_resources/) are not yet supported. This means that resources that solely use usage costs will have a `0.00` cost shown:
  
   ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/zero-cost.png?raw=true)
-  
+
   Follow [this issue](https://github.com/infracost/vscode-infracost/issues/6) to receive updates on usage file support.
 * [Diff functionality](https://www.infracost.io/docs/features/cli_commands/#diff) is not yet supported. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/8) to receive updates on diff support.
 * VSCode Infracost does not yet work with Infracost [config files](https://www.infracost.io/docs/features/config_file/). Multi project support is available using Infracost native auto-detection.
   This means that the first time running in a multi-project workspace might be quite slow. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/7) to receive updates on config file support.
+
+### Locating Infracost error logs
+
+If you're having problems with the extension and your problem isn't any of the **known issues** above, you can find the Infracost extension logs using the following method:
+
+1. Open the extension terminal using the top menu (Terminal->New Terminal)
+2. Select **Output** and **log (Window)** from the dropdown
+   ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/error-logs.png?raw=true)
+
+The log there might give you more information for a problem you can fix on your own, e.g. syntax errors. If it's something more ominous please [raise an issue](https://github.com/infracost/vscode-infracost/issues), so that we can identify and fix the problem. Please include as much of the log information as you can and any other helpful information like OS and VSCode workspace size.
 
 ## Contributing
 
