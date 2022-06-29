@@ -44,12 +44,21 @@ The Infracost VSCode extension requires you to have:
 
 ## Known Issues
 
+* When opening a workspace with a large number of Terraform projects for the first time. Infracost will evaluate all the projects and download any required modules. This means
+  that it might take some time before pricing information is available. If you're worried that Infracost VSCode extension isn't working in your workspace but haven't got
+  any error messages, it is likely that Infracost is still indexing your workspace. The extension has a status bar on the right-hand side of the editor which will show a loading state
+  when Infracost is running.
+
+  ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/loading.png?raw=true)  
+* Terragrunt is not supported. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/4) for more information for future updates about Terragrunt support.
 * Infracost [usage files](https://www.infracost.io/docs/features/usage_based_resources/) are not yet supported. This means that resources that solely use usage costs will have a `0.00` cost shown:
-  
+ 
   ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/zero-cost.png?raw=true)
-* [Diff functionality](https://www.infracost.io/docs/features/cli_commands/#diff) is not yet supported.
+  
+  Follow [this issue](https://github.com/infracost/vscode-infracost/issues/6) to receive updates on usage file support.
+* [Diff functionality](https://www.infracost.io/docs/features/cli_commands/#diff) is not yet supported. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/8) to receive updates on diff support.
 * VSCode Infracost does not yet work with Infracost [config files](https://www.infracost.io/docs/features/config_file/). Multi project support is available using Infracost native auto-detection.
-  This means that the first time running in a multi-project workspace might be quite slow.
+  This means that the first time running in a multi-project workspace might be quite slow. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/7) to receive updates on config file support.
 
 ## Contributing
 
