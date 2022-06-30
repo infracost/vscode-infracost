@@ -351,7 +351,7 @@ class Workspace {
 
   async run(path: string, init: boolean = false): Promise<infracostJSON.RootObject | undefined> {
     try {
-      const cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path ${path} --format json --log-level info`
+      const cmd = `infracost breakdown --path ${path} --format json --log-level info`
       const { stdout, stderr } = await util.promisify(exec)(cmd);
       const body = <infracostJSON.RootObject>JSON.parse(stdout);
 
