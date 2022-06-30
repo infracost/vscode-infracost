@@ -354,7 +354,7 @@ class Workspace {
       let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path ${path} --format json --log-level info`
 
       if (os.platform() == 'win32') {
-        cmd = 'cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path .'
+        cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path ${path} --format json --log-level info"`
       }
 
       const { stdout, stderr } = await util.promisify(exec)(cmd);
