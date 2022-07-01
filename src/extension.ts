@@ -22,6 +22,7 @@ import resourceRows from './templates/resource-rows.hbs';
 import blockOutput from './templates/block-output.hbs';
 import { join } from 'path';
 import { gte } from 'semver';
+import * as os from 'os';
 
 const Handlebars = create();
 
@@ -112,7 +113,6 @@ function registerTemplates(context: vscode.ExtensionContext) {
   registerPartialFromFile('resourceRows', context.asAbsolutePath(join('dist', resourceRows)))
   registerPartialFromFile('tableHeaders', context.asAbsolutePath(join('dist', tableHeader)))
 }
-
 
 async function isExtensionValid(): Promise<boolean> {
   const terraformExtension = vscode.extensions.getExtension('HashiCorp.terraform');
@@ -351,7 +351,12 @@ class Workspace {
 
   async run(path: string, init: boolean = false): Promise<infracostJSON.RootObject | undefined> {
     try {
-      const cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path ${path} --format json --log-level info`
+      let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path ${path} --format json --log-level info`
+
+      if (os.platform() == 'win32') {
+        cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path ${path} --format json --log-level info"`
+      }
+
       const { stdout, stderr } = await util.promisify(exec)(cmd);
       const body = <infracostJSON.RootObject>JSON.parse(stdout);
 
@@ -360,13 +365,19 @@ class Workspace {
         const formatted = new Project(projectPath, body.currency, this.blockTemplate);
         for (const resource of project.breakdown.resources) {
           for (const call of resource.metadata.calls) {
-            formatted.file(call.filename).block(call.blockName).resources.push(resource);
-
-            if (this.filesToProjects[call.filename] === undefined) {
-              this.filesToProjects[call.filename] = {};
+            let filename = call.filename;
+            if (filename.startsWith('c')) {
+              const slash = /\\+/gi;
+              filename = '/'+filename.replace(slash, '/');
             }
 
-            this.filesToProjects[call.filename][projectPath] = true;
+            formatted.file(filename).block(call.blockName).resources.push(resource);
+
+            if (this.filesToProjects[filename] === undefined) {
+              this.filesToProjects[filename] = {};
+            }
+
+            this.filesToProjects[filename][projectPath] = true;
           }
         }
 
