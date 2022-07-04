@@ -30,7 +30,7 @@ Check out the video below to see the Infracost extension in action!
 
 Follow [this step](https://www.infracost.io/docs/#1-install-infracost) to install the Infracost CLI, which is used by this VSCode extension.
 
-### 2. Get API key
+### 2. Get an API key
 
 Follow [this step](https://www.infracost.io/docs/#2-get-api-key) to get a free API key that's used by the CLI to get prices from our Cloud Pricing API.
 
