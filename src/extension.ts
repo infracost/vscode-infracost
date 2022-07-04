@@ -391,6 +391,14 @@ class Workspace {
 
       return body;
     } catch (error) {
+      if (error instanceof Error) {
+        const msg = error.message ?? '';
+        if (msg.toLowerCase().includes('no infracost_api_key environment')) {
+          vscode.window.showErrorMessage("Please register your infracost CLI by running `infracost register` in your terminal.");
+          return;
+        }
+      }
+
       console.error(`Infracost cmd error trace ${error}`);
 
       if (init) {
