@@ -26,10 +26,24 @@ Check out the video below to see the Infracost extension in action!
 
 ## Getting started
 
-1. Install [Infracost CLI](https://www.infracost.io/docs/#1-install-infracost) on your machine & register for an API key.
-2. Open VSCode and install the [Infracost extension](https://marketplace.visualstudio.com/items?itemName=Infracost.infracost). This will also install the the [Hashicorp Terraform extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) extension if you don't already have it.
+### 1. Install Infracost CLI
+
+Follow [this step](https://www.infracost.io/docs/#1-install-infracost) to install the Infracost CLI, which is used by this VSCode extension.
+
+### 2. Get API key
+
+Follow [this step](https://www.infracost.io/docs/#2-get-api-key) to get a free API key that's used by the CLI to get prices from our Cloud Pricing API.
+
+### 3. Install VSCode extension
+
+Open VSCode and install the [Infracost extension](https://marketplace.visualstudio.com/items?itemName=Infracost.infracost).
+
+This will also install the the [Hashicorp Terraform extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) extension if you don't already have it.
    ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/infracost-install.png?raw=true)
-3. Navigate to any Terraform file, if you've done the prior steps correctly you'll see costs above [supported blocks](https://www.infracost.io/docs/supported_resources/overview/).
+
+### 4. Use extension
+
+Navigate to any Terraform file, if you've done the prior steps correctly you'll see costs above [supported blocks](https://www.infracost.io/docs/supported_resources/overview/).
    ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/maintf.png?raw=true)
   
 ## Requirements
