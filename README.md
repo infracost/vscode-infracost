@@ -4,7 +4,10 @@ Infracost's VSCode extension shows you cost estimates for Terraform right in you
 
 ## Features
 
-Infracost's extension shows a snapshot of the total cost of resources right above their Terraform definitions. Infracost's output updates on file save.
+Infracost's extension shows a snapshot of the total cost of resources right above their Terraform definitions. Infracost's output updates on file save. This helps with a few use-cases:
+- **Compare configs, instance types, regions etc**: copy/paste a code block, make changes and compare them.
+- **Quick cost estimate**: write a code block and get a cost estimate without having to use AWS, Google or Azure cost calculators, or read the long/complicated pricing web pages.
+- **Catch costly typos**: if you accidentally type 22 instead of 2 as the instance count, or 1000GB volume size instead of 100, the cost estimate will immediately pick that up and let you know.
 
 ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/resources.gif?raw=true)
 
@@ -32,7 +35,10 @@ Follow [this step](https://www.infracost.io/docs/#1-install-infracost) to instal
 
 ### 2. Get an API key
 
-Follow [this step](https://www.infracost.io/docs/#2-get-api-key) to get a free API key that's used by the CLI to get prices from our Cloud Pricing API.
+Follow [this step](https://www.infracost.io/docs/#2-get-api-key) to get a free API key that's used by the CLI to get prices from our Cloud Pricing API, e.g. get prices for instance types.
+
+- No cloud credentials or secrets are [sent](https://www.infracost.io/docs/faq/#what-data-is-sent-to-the-cloud-pricing-api) to the API and you can also [self-host](https://www.infracost.io/docs/cloud_pricing_api/self_hosted/) it.
+- Infracost does not make any changes to your Terraform state or cloud resources.
 
 ### 3. Install VSCode extension
 
