@@ -13,12 +13,13 @@ Infracost's extension shows a snapshot of the total cost of resources right abov
 
 Both `resource` and `module` blocks support showing cost estimates. Infracost's VSCode extension even supports showing prices on **3rd party module blocks**! 
 
-
 ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/modules.gif?raw=true)
 
 If a simple monthly cost isn't enough for you, just click the overview to show a detailed breakdown of what components affect the price.
 
 ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/webview.gif?raw=true)
+
+To set the currency, run `infracost configure set currency EUR` (or any other ISO 4217 currency code). [This FAQ](https://www.infracost.io/docs/faq/#can-i-show-costs-in-a-different-currency) has more details.
 
 ## Demo
 
