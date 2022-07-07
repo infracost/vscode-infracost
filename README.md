@@ -19,7 +19,6 @@ If a simple monthly cost isn't enough for you, just click the overview to show a
 
 ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/webview.gif?raw=true)
 
-To set the currency, run `infracost configure set currency EUR` (or any other ISO 4217 currency code). [This FAQ](https://www.infracost.io/docs/faq/#can-i-show-costs-in-a-different-currency) has more details.
 
 ## Demo
 
@@ -61,13 +60,17 @@ The Infracost VSCode extension requires you to have:
 * Infracost CLI version **v0.10.6** or above [installed](https://www.infracost.io/docs) and registered with a valid API key.
 * The [Terraform VSCode extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) installed and enabled in VSCode.
 
-## Faqs
+## FAQs
 
 ### How can I supply input variables to Infracost VSCode extension?
 
 To supply input variables for your Terraform projects, you must include a var file called `terraform.tfvars` at the root level of your Terraform project.
 Alternatively, you can use several files with the suffix `*.auto.tfvars`, e.g. `dev.auto.tfvars` or `prod.auto.tfvars`. Currently, only HCL variable files are supported
 you can follow [this issue](https://github.com/infracost/infracost/issues/1773) for updates on support for JSON variable files.
+
+### How can I configure the currency Infracost uses?
+
+To set the currency, run `infracost configure set currency EUR` (or any other ISO 4217 currency code). [This FAQ](https://www.infracost.io/docs/faq/#can-i-show-costs-in-a-different-currency) has more details.
 
 ## Troubleshooting
 
