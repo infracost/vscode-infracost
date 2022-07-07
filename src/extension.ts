@@ -25,6 +25,7 @@ import { gte } from 'semver';
 import * as os from 'os';
 
 const Handlebars = create();
+const debugLog = vscode.window.createOutputChannel("Infracost Debug");
 
 /**
  * infracostStatusBar is a vscode status bar that sits on the bottom of the vscode editor.
@@ -294,6 +295,8 @@ class Workspace {
   }
 
   async init() {
+    debugLog.appendLine(`debug: initializing workspace`);
+
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders?.length === 0) {
       return;
@@ -309,7 +312,10 @@ class Workspace {
 
   async fileChange(file: vscode.TextDocument) {
     const isTfFile = /.*\.tf$/.test(file.fileName)
+    const filename = cleanFilename(file.uri.path);
+
     if (!isTfFile) {
+      debugLog.appendLine(`debug: ignoring file change for path ${filename}, not a terraform`);
       return;
     }
 
@@ -317,9 +323,11 @@ class Workspace {
     this.loading = true;
     this.codeLensEventEmitter.fire();
 
-    const filename = file.uri.path;
+    debugLog.appendLine(`debug: detected file change for path ${filename}`);
+
     const projects = this.filesToProjects[filename];
     if (projects === undefined) {
+      debugLog.appendLine(`debug: no valid projects found for path ${filename}`);
       setInfracostReadyStatus();
       return {};
     }
@@ -350,6 +358,7 @@ class Workspace {
   }
 
   async run(path: string, init: boolean = false): Promise<infracostJSON.RootObject | undefined> {
+    debugLog.appendLine(`debug: running Infracost in project: ${path}`);
     try {
       let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path ${path} --format json --log-level info`
 
@@ -357,19 +366,20 @@ class Workspace {
         cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path ${path} --format json --log-level info"`
       }
 
+      debugLog.appendLine(`debug: running Infracost cmd ${cmd}`);
+
       const { stdout, stderr } = await util.promisify(exec)(cmd);
       const body = <infracostJSON.RootObject>JSON.parse(stdout);
 
       for (const project of body.projects) {
+        debugLog.appendLine(`debug: found project ${project}`);
+
         const projectPath = project.metadata.path;
         const formatted = new Project(projectPath, body.currency, this.blockTemplate);
         for (const resource of project.breakdown.resources) {
           for (const call of resource.metadata.calls) {
-            let filename = call.filename;
-            if (filename.startsWith('c')) {
-              const slash = /\\+/gi;
-              filename = '/'+filename.replace(slash, '/');
-            }
+            const filename = cleanFilename(call.filename);
+            debugLog.appendLine(`debug: adding file: ${filename} to project: ${projectPath}`);
 
             formatted.file(filename).block(call.blockName).resources.push(resource);
 
@@ -399,7 +409,7 @@ class Workspace {
         }
       }
 
-      console.error(`Infracost cmd error trace ${error}`);
+      debugLog.appendLine(`error: Infracost cmd error trace ${error}`);
 
       if (init) {
         vscode.window.showErrorMessage(`Could not run the infracost cmd in the ${path} directory. If this is a multi-project workspace please try opening just a single project. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
@@ -423,10 +433,14 @@ class InfracostLensProvider implements CodeLensProvider {
 
   async provideCodeLenses(document: TextDocument, token: CancellationToken): Promise<CodeLens[]> {
     const lenses: CodeLens[] = [];
-    const blocks = this.workspace.project(document.uri.path);
+    const filename = cleanFilename(document.uri.path);
+    debugLog.appendLine(`debug: providing codelens for file ${filename}`);
+
+    const blocks = this.workspace.project(filename);
 
     const symbols = await commands.executeCommand<SymbolInformation[]>('vscode.executeDocumentSymbolProvider', document.uri);
     if (symbols === undefined) {
+      debugLog.appendLine(`debug: no valid symbols found for file ${filename}`);
       return lenses;
     }
 
@@ -437,7 +451,10 @@ class InfracostLensProvider implements CodeLensProvider {
 
       const line = document.lineAt(getRangeFromSymbol(sym).start);
       const resourceKey = sym.name.replace(/\s+/g, '.').replace(/\"/g, '').replace(/^resource\./g, '');
+      debugLog.appendLine(`debug: evaluating symbol ${resourceKey}`);
+
       if (blocks[resourceKey] !== undefined) {
+        debugLog.appendLine(`debug: found Infracost price for symbol ${resourceKey}`);
         const block = blocks[resourceKey];
         const cost = block.cost();
 
@@ -482,6 +499,18 @@ function is<T extends object>(o: object, propOrMatcher?: keyof T | ((o: any) => 
   if (typeof propOrMatcher === 'function') return propOrMatcher(o);
 
   return value === undefined ? (o as any)[propOrMatcher] !== undefined : (o as any)[propOrMatcher] === value;
+}
+
+function cleanFilename(filename: string): string  {
+  const replaceC = /^\/C/g
+  filename = filename.replace(replaceC, '/c')
+
+  if (filename.startsWith('c')) {
+    const slash = /\\+/gi;
+    filename = '/'+filename.replace(slash, '/');
+  }
+
+  return filename;
 }
 
 function setInfracostStatusLoading() {

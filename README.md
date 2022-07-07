@@ -97,7 +97,9 @@ To set the currency, run `infracost configure set currency EUR` (or any other IS
 If you're having problems with the extension and your problem isn't any of the **known issues** above, you can find the Infracost extension logs using the following method:
 
 1. Open the extension terminal using the top menu (Terminal->New Terminal)
-2. Select **Output** and **log (Window)** from the dropdown
+2. Select **Output** and **Infracost Debug** from the dropdown.
+   ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/infracost-debug-log.png?raw=true)
+3. There are sometimes additional CLI logs hidden in the **log (Window)** output.
    ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/error-logs.png?raw=true)
 
 The log there might give you more information for a problem you can fix on your own, e.g. syntax errors. If it's something more ominous please [raise an issue](https://github.com/infracost/vscode-infracost/issues), so that we can identify and fix the problem. Please include as much of the log information as you can and any other helpful information like OS and VSCode workspace size.
