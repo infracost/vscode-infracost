@@ -345,12 +345,13 @@ class Workspace {
       debugLog.appendLine(`debug: no valid projects found for path ${filename} attempting to locate project for file`);
 
       for (const project in this.projects) {
-        const projectDir = path.normalize(project);
-        const dir = path.dirname(path.normalize(filename));
+        const projectDir = path.normalize(cleanFilename(project));
+        const dir = path.dirname(path.normalize(cleanFilename(filename)));
+        debugLog.appendLine(`debug: evaluating if ${filename} is within project ${projectDir}`);
 
         if (projectDir === dir) {
-          debugLog.appendLine(`debug: using project ${projectDir} for ${filename}, running file change event again`);
-          await this.run(projectDir);
+          debugLog.appendLine(`debug: using project ${project} for ${filename}, running file change event again`);
+          await this.run(project);
           this.loading = false;
           setInfracostReadyStatus();
           this.codeLensEventEmitter.fire();
