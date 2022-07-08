@@ -23,6 +23,7 @@ import blockOutput from './templates/block-output.hbs';
 import { join } from 'path';
 import { gte } from 'semver';
 import * as os from 'os';
+import * as path from 'path';
 
 const Handlebars = create();
 const debugLog = vscode.window.createOutputChannel("Infracost Debug");
@@ -289,6 +290,7 @@ class Workspace {
   filesToProjects: { [key: string]: { [key: string]: true } } = {};
   codeLensEventEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
   blockTemplate: TemplateDelegate;
+  isError: boolean = false;
 
   constructor(blockTemplate: TemplateDelegate) {
     this.blockTemplate = blockTemplate;
@@ -303,7 +305,13 @@ class Workspace {
     }
 
     const root = folders[0].uri.fsPath.toString();
-    await this.run(root, true);
+    const out = await this.run(root, true);
+    if (out === undefined) {
+      this.isError = true;
+      return
+    }
+
+    this.isError = false;
   }
 
   show(block: Block) {
@@ -311,11 +319,18 @@ class Workspace {
   }
 
   async fileChange(file: vscode.TextDocument) {
-    const isTfFile = /.*\.tf$/.test(file.fileName)
     const filename = cleanFilename(file.uri.path);
+    const isValid = await isValidTerraformFile(file);
 
-    if (!isTfFile) {
-      debugLog.appendLine(`debug: ignoring file change for path ${filename}, not a terraform`);
+    if (!isValid) {
+      debugLog.appendLine(`debug: ignoring file change for path ${filename}`);
+      return;
+    }
+ 
+    if (this.isError) {
+      // if we're in error then we need to init again as all projects
+      // will be nil and thus cannot be resolved to a costs/symbols.
+      await this.init();
       return;
     }
 
@@ -327,10 +342,28 @@ class Workspace {
 
     const projects = this.filesToProjects[filename];
     if (projects === undefined) {
-      debugLog.appendLine(`debug: no valid projects found for path ${filename}`);
+      debugLog.appendLine(`debug: no valid projects found for path ${filename} attempting to locate project for file`);
+
+      for (const project in this.projects) {
+        const projectDir = path.normalize(cleanFilename(project));
+        const dir = path.dirname(path.normalize(cleanFilename(filename)));
+        debugLog.appendLine(`debug: evaluating if ${filename} is within project ${projectDir}`);
+
+        if (projectDir === dir) {
+          debugLog.appendLine(`debug: using project ${project} for ${filename}, running file change event again`);
+          await this.run(project);
+          this.loading = false;
+          setInfracostReadyStatus();
+          this.codeLensEventEmitter.fire();
+          return;
+        }
+      }
+
+      this.loading = false;
       setInfracostReadyStatus();
-      return {};
+      return;
     }
+
 
     for (const name in projects) {
       await this.run(name);
@@ -412,9 +445,9 @@ class Workspace {
       debugLog.appendLine(`error: Infracost cmd error trace ${error}`);
 
       if (init) {
-        vscode.window.showErrorMessage(`Could not run the infracost cmd in the ${path} directory. If this is a multi-project workspace please try opening just a single project. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
+        vscode.window.showErrorMessage(`Could not run the infracost cmd in the ${path} directory. This is likely because of a syntax error or invalid project. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
       } else {
-        vscode.window.showErrorMessage(`Error fetching cloud costs with Infracost, please run again by saving the file or reopening the Workspace. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
+        vscode.window.showErrorMessage(`Error fetching cloud costs with Infracost, please run again by saving the file or reopening the workspace. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
       }
     }
 
@@ -499,6 +532,24 @@ function is<T extends object>(o: object, propOrMatcher?: keyof T | ((o: any) => 
   if (typeof propOrMatcher === 'function') return propOrMatcher(o);
 
   return value === undefined ? (o as any)[propOrMatcher] !== undefined : (o as any)[propOrMatcher] === value;
+}
+
+async function isValidTerraformFile(file: vscode.TextDocument): Promise<boolean> {
+  const filename = file.uri.path;
+  const isTfFile = /.*\.tf$/.test(filename);
+
+  if (!isTfFile) {
+    debugLog.appendLine(`debug: ${filename} is not a valid Terraform file extension`);
+    return false;
+  }
+
+  const symbols = await commands.executeCommand<SymbolInformation[]>('vscode.executeDocumentSymbolProvider', file.uri);
+  if (symbols === undefined) {
+    debugLog.appendLine(`debug: no valid Terraform symbols found for file ${filename}`);
+    return false
+  }
+
+  return true;
 }
 
 function cleanFilename(filename: string): string  {
