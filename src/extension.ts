@@ -548,15 +548,7 @@ async function isValidTerraformFile(file: vscode.TextDocument): Promise<boolean>
     return false
   }
 
-  for (const sym of symbols) {
-    if (sym.name.indexOf('resource') !== -1 || sym.name.indexOf('module') !== -1) {
-      debugLog.appendLine(`debug: found valid Terraform symbol ${sym.name} for file ${filename}`);
-      return true;
-    }
-  }
-
-  debugLog.appendLine(`debug: no resource or module symbols found for file ${filename}`);
-  return false;
+  return true;
 }
 
 function cleanFilename(filename: string): string  {
