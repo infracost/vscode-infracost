@@ -1,8 +1,12 @@
 import { exec } from 'child_process';
+import { readFile } from 'fs/promises';
+import { create, TemplateDelegate } from 'handlebars';
+import * as os from 'os';
+import * as path from 'path';
+import { gte } from 'semver';
 import * as util from 'util';
 import * as vscode from 'vscode';
 import {
-  CancellationToken,
   CodeLens,
   CodeLensProvider,
   Command,
@@ -11,22 +15,16 @@ import {
   languages,
   Position,
   SymbolInformation,
-  TextDocument
+  TextDocument,
 } from 'vscode';
-import { create, TemplateDelegate } from 'handlebars';
-import { readFile } from 'fs/promises';
 import tableHeader from './templates/table-headers.hbs';
 import costComponentRow from './templates/cost-component-row.hbs';
 import emptyTableRows from './templates/empty-table-rows.hbs';
 import resourceRows from './templates/resource-rows.hbs';
 import blockOutput from './templates/block-output.hbs';
-import { join } from 'path';
-import { gte } from 'semver';
-import * as os from 'os';
-import * as path from 'path';
 
 const Handlebars = create();
-const debugLog = vscode.window.createOutputChannel("Infracost Debug");
+const debugLog = vscode.window.createOutputChannel('Infracost Debug');
 
 /**
  * infracostStatusBar is a vscode status bar that sits on the bottom of the vscode editor.
@@ -40,9 +38,9 @@ let infracostStatusBar: vscode.StatusBarItem;
 let webviews: { [key: string]: vscode.WebviewPanel };
 
 function registerPartialFromFile(name: string, filename: string) {
-  readFile(filename).then(data => {
+  readFile(filename).then((data) => {
     Handlebars.registerPartial(name, data.toString());
-  })
+  });
 }
 
 async function compileTemplateFromFile(filename: string): Promise<TemplateDelegate> {
@@ -51,92 +49,94 @@ async function compileTemplateFromFile(filename: string): Promise<TemplateDelega
   return Handlebars.compile(buf.toString());
 }
 
-
 function registerTemplates(context: vscode.ExtensionContext) {
-  Handlebars.registerHelper('eq', (arg1: any, arg2: any): boolean => {
-    return arg1 === arg2;
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Handlebars.registerHelper('eq', (arg1: any, arg2: any): boolean => (
+    arg1 === arg2
+  ));
 
-  Handlebars.registerHelper('gt', (arg1: number, arg2: number): boolean => {
-    return arg1 > arg2;
-  });
+  Handlebars.registerHelper('gt', (arg1: number, arg2: number): boolean => (
+    arg1 > arg2
+  ));
 
-  Handlebars.registerHelper('add', (arg1: number, arg2: number): number => {
-    return arg1 + arg2;
-  });
+  Handlebars.registerHelper('add', (arg1: number, arg2: number): number => (
+    arg1 + arg2
+  ));
 
   Handlebars.registerHelper('repeat', (n: number, block) => {
     let accum = '';
 
-    for (var i = 0; i < n; ++i) {
+    for (let i = 0; i < n; ++i) {
       accum += block.fn(i);
     }
 
     return accum;
   });
 
-  Handlebars.registerHelper('contains', (ob: any, arg: string): boolean => {
-    return ob[arg] !== undefined;
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Handlebars.registerHelper('contains', (ob: any, arg: string): boolean => (
+    ob[arg] !== undefined
+  ));
 
-  Handlebars.registerHelper('tags', (ob: any): string => {
-    return Object.keys(ob).map((k) => {
-      return `${k}=${ob[k]}`
-    }).join(', ');
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Handlebars.registerHelper('tags', (ob: any): string => (
+    Object.keys(ob).map((k) => (
+      `${k}=${ob[k]}`
+    )).join(', ')
+  ));
 
   Handlebars.registerHelper('formatPrice', (currency: string, price: number): string => {
     const formatter = new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency,
+      currency,
     });
 
     return formatter.format(price);
-  })
+  });
 
   Handlebars.registerHelper('formatTitleWithCurrency', (currency: string, title: string): string => {
-    if (currency === "USD") {
+    if (currency === 'USD') {
       return title;
     }
 
     return `${title} (${currency}`;
-  })
+  });
 
-  Handlebars.registerHelper('increment', (i: number): number => {
-    return i + 1;
-  })
+  Handlebars.registerHelper('increment', (i: number): number => (
+    i + 1
+  ));
 
-  Handlebars.registerHelper('blockCost', (block: Block): string => {
-    return block.cost();
-  })
+  Handlebars.registerHelper('blockCost', (block: Block): string => (
+    block.cost()
+  ));
 
-  registerPartialFromFile('costComponentRow', context.asAbsolutePath(join('dist', costComponentRow)))
-  registerPartialFromFile('emptyTableRows', context.asAbsolutePath(join('dist', emptyTableRows)))
-  registerPartialFromFile('resourceRows', context.asAbsolutePath(join('dist', resourceRows)))
-  registerPartialFromFile('tableHeaders', context.asAbsolutePath(join('dist', tableHeader)))
+  registerPartialFromFile('costComponentRow', context.asAbsolutePath(path.join('dist', costComponentRow)));
+  registerPartialFromFile('emptyTableRows', context.asAbsolutePath(path.join('dist', emptyTableRows)));
+  registerPartialFromFile('resourceRows', context.asAbsolutePath(path.join('dist', resourceRows)));
+  registerPartialFromFile('tableHeaders', context.asAbsolutePath(path.join('dist', tableHeader)));
 }
 
 async function isExtensionValid(): Promise<boolean> {
   const terraformExtension = vscode.extensions.getExtension('HashiCorp.terraform');
   if (terraformExtension === undefined) {
-    vscode.window.showErrorMessage('The Hashicorp Terraform extension is required for the Infracost extension to work. Please install it: https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform.')
+    vscode.window.showErrorMessage('The Hashicorp Terraform extension is required for the Infracost extension to work. Please install it: https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform.');
     return false;
   }
 
   try {
-    const cmd = `infracost --version`
+    const cmd = 'infracost --version';
     const { stdout } = await util.promisify(exec)(cmd);
-    const version = stdout.replace('Infracost ', '')
+    const version = stdout.replace('Infracost ', '');
     if (!gte(version, '0.10.6')) {
-      vscode.window.showErrorMessage(`The Infracost extension requires at least version v0.10.6 of the Infracost CLI. Please upgrade your CLI.`)
+      vscode.window.showErrorMessage('The Infracost extension requires at least version v0.10.6 of the Infracost CLI. Please upgrade your CLI.');
       return false;
     }
   } catch (error) {
-    vscode.window.showErrorMessage('The Infracost extension requires the Infracost CLI to function. Please install it: https://www.infracost.io/docs/#1-install-infracost.')
-    return false
+    vscode.window.showErrorMessage('The Infracost extension requires the Infracost CLI to function. Please install it: https://www.infracost.io/docs/#1-install-infracost.');
+    return false;
   }
 
-  return true
+  return true;
 }
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -149,25 +149,28 @@ export async function activate(context: vscode.ExtensionContext) {
 
   infracostStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   context.subscriptions.push(infracostStatusBar);
-  setInfracostStatusLoading()
+  setInfracostStatusLoading();
 
-  registerTemplates(context)
-  const template = await compileTemplateFromFile(context.asAbsolutePath(join('dist', blockOutput)));
+  registerTemplates(context);
+  const template = await compileTemplateFromFile(context.asAbsolutePath(path.join('dist', blockOutput)));
   const w = new Workspace(template);
   await w.init();
 
-  let disposable = vscode.commands.registerCommand('infracost.resourceBreakdown', w.show.bind(w));
+  const disposable = vscode.commands.registerCommand('infracost.resourceBreakdown', Workspace.show.bind(w));
 
   context.subscriptions.push(disposable);
   languages.registerCodeLensProvider([{ scheme: 'file', pattern: '**/*.tf' }], new InfracostLensProvider(w));
   vscode.workspace.onDidSaveTextDocument(w.fileChange.bind(w));
-  setInfracostReadyStatus()
+  setInfracostReadyStatus();
 }
 
 class Project {
   name: string;
+
   currency: string;
+
   template: TemplateDelegate;
+
   files: { [key: string]: File } = {};
 
   constructor(name: string, currency: string, template: TemplateDelegate) {
@@ -187,8 +190,11 @@ class Project {
 
 class File {
   name: string;
+
   currency: string;
+
   template: TemplateDelegate;
+
   blocks: { [key: string]: Block } = {};
 
   constructor(name: string, currency: string, template: TemplateDelegate) {
@@ -208,10 +214,15 @@ class File {
 
 class Block {
   name: string;
+
   filename: string;
+
   currency: string;
+
   template: TemplateDelegate;
+
   resources: infracostJSON.Resource[] = [];
+
   webview: vscode.WebviewPanel | undefined;
 
   constructor(name: string, filename: string, currency: string, template: TemplateDelegate) {
@@ -222,7 +233,7 @@ class Block {
 
     if (webviews[this.key()] !== undefined) {
       this.webview = webviews[this.key()];
-      this.webview.onDidDispose(e => {
+      this.webview.onDidDispose(() => {
         this.webview = undefined;
         delete webviews[this.key()];
       });
@@ -230,11 +241,11 @@ class Block {
   }
 
   key(): string {
-    return this.filename + '|' + this.name;
+    return `${this.filename}|${this.name}`;
   }
 
   cost(): string {
-    let cost: number = 0;
+    let cost = 0;
 
     for (const r of this.resources) {
       if (r.monthlyCost === null) {
@@ -269,13 +280,13 @@ class Block {
         enableFindWidget: true,
         enableCommandUris: true,
         enableScripts: true,
-      }
-    )
+      },
+    );
     this.webview = wp;
-    webviews[this.filename + '|' + this.name] = wp;
+    webviews[`${this.filename}|${this.name}`] = wp;
     this.webview.webview.html = this.template(this);
 
-    this.webview.onDidDispose(e => {
+    this.webview.onDidDispose(() => {
       this.webview = undefined;
       delete webviews[this.key()];
     });
@@ -285,19 +296,24 @@ class Block {
 }
 
 class Workspace {
-  loading: boolean = false;
+  loading = false;
+
   projects: { [key: string]: Project } = {};
+
   filesToProjects: { [key: string]: { [key: string]: true } } = {};
+
   codeLensEventEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+
   blockTemplate: TemplateDelegate;
-  isError: boolean = false;
+
+  isError = false;
 
   constructor(blockTemplate: TemplateDelegate) {
     this.blockTemplate = blockTemplate;
   }
 
   async init() {
-    debugLog.appendLine(`debug: initializing workspace`);
+    debugLog.appendLine('debug: initializing workspace');
 
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders?.length === 0) {
@@ -308,13 +324,13 @@ class Workspace {
     const out = await this.run(root, true);
     if (out === undefined) {
       this.isError = true;
-      return
+      return;
     }
 
     this.isError = false;
   }
 
-  show(block: Block) {
+  static show(block: Block) {
     block.display();
   }
 
@@ -326,7 +342,7 @@ class Workspace {
       debugLog.appendLine(`debug: ignoring file change for path ${filename}`);
       return;
     }
- 
+
     if (this.isError) {
       // if we're in error then we need to init again as all projects
       // will be nil and thus cannot be resolved to a costs/symbols.
@@ -344,7 +360,7 @@ class Workspace {
     if (projects === undefined) {
       debugLog.appendLine(`debug: no valid projects found for path ${filename} attempting to locate project for file`);
 
-      for (const project in this.projects) {
+      for (const project of Object.keys(this.projects)) {
         const projectDir = path.normalize(cleanFilename(project));
         const dir = path.dirname(path.normalize(cleanFilename(filename)));
         debugLog.appendLine(`debug: evaluating if ${filename} is within project ${projectDir}`);
@@ -364,8 +380,7 @@ class Workspace {
       return;
     }
 
-
-    for (const name in projects) {
+    for (const name of Object.keys(projects)) {
       await this.run(name);
     }
 
@@ -374,34 +389,30 @@ class Workspace {
     this.codeLensEventEmitter.fire();
   }
 
-  localBlockName(name: string): string {
-    const pieces = name.split('.');
-    return 'resource.' + pieces[pieces.length - 2] + '.' + pieces[pieces.length - 1];
-  }
-
   // TODO: determine or allow users to switch the project they are using.
   project(filename: string): { [key: string]: Block } {
     const projects = this.filesToProjects[filename];
 
-    for (const project in projects) {
+    if (Object.keys(projects).length > 0) {
+      const project = Object.keys(projects)[0];
       return this.projects[project].file(filename).blocks;
     }
 
     return {};
   }
 
-  async run(path: string, init: boolean = false): Promise<infracostJSON.RootObject | undefined> {
+  async run(path: string, init = false): Promise<infracostJSON.RootObject | undefined> {
     debugLog.appendLine(`debug: running Infracost in project: ${path}`);
     try {
-      let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path ${path} --format json --log-level info`
+      let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path ${path} --format json --log-level info`;
 
-      if (os.platform() == 'win32') {
-        cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path ${path} --format json --log-level info"`
+      if (os.platform() === 'win32') {
+        cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path ${path} --format json --log-level info"`;
       }
 
       debugLog.appendLine(`debug: running Infracost cmd ${cmd}`);
 
-      const { stdout, stderr } = await util.promisify(exec)(cmd);
+      const { stdout } = await util.promisify(exec)(cmd);
       const body = <infracostJSON.RootObject>JSON.parse(stdout);
 
       for (const project of body.projects) {
@@ -426,10 +437,10 @@ class Workspace {
 
         // reload the webviews after the save
         this.projects[projectPath] = formatted;
-        for (const key in webviews) {
+        Object.keys(webviews).forEach((key) => {
           const [filename, blockname] = key.split('|');
           formatted.file(filename).block(blockname).display();
-        }
+        });
       }
 
       return body;
@@ -437,8 +448,8 @@ class Workspace {
       if (error instanceof Error) {
         const msg = error.message ?? '';
         if (msg.toLowerCase().includes('no infracost_api_key environment')) {
-          vscode.window.showErrorMessage("Please register your infracost CLI by running `infracost register` in your terminal.");
-          return;
+          vscode.window.showErrorMessage('Please register your infracost CLI by running `infracost register` in your terminal.');
+          return undefined;
         }
       }
 
@@ -447,7 +458,7 @@ class Workspace {
       if (init) {
         vscode.window.showErrorMessage(`Could not run the infracost cmd in the ${path} directory. This is likely because of a syntax error or invalid project. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
       } else {
-        vscode.window.showErrorMessage(`Error fetching cloud costs with Infracost, please run again by saving the file or reopening the workspace. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
+        vscode.window.showErrorMessage('Error fetching cloud costs with Infracost, please run again by saving the file or reopening the workspace. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.');
       }
     }
 
@@ -457,6 +468,7 @@ class Workspace {
 
 class InfracostLensProvider implements CodeLensProvider {
   workspace: Workspace;
+
   onDidChangeCodeLenses: vscode.Event<void>;
 
   constructor(workspace: Workspace) {
@@ -464,7 +476,7 @@ class InfracostLensProvider implements CodeLensProvider {
     this.onDidChangeCodeLenses = workspace.codeLensEventEmitter.event;
   }
 
-  async provideCodeLenses(document: TextDocument, token: CancellationToken): Promise<CodeLens[]> {
+  async provideCodeLenses(document: TextDocument): Promise<CodeLens[]> {
     const lenses: CodeLens[] = [];
     const filename = cleanFilename(document.uri.path);
     debugLog.appendLine(`debug: providing codelens for file ${filename}`);
@@ -483,7 +495,7 @@ class InfracostLensProvider implements CodeLensProvider {
       }
 
       const line = document.lineAt(getRangeFromSymbol(sym).start);
-      const resourceKey = sym.name.replace(/\s+/g, '.').replace(/\"/g, '').replace(/^resource\./g, '');
+      const resourceKey = sym.name.replace(/\s+/g, '.').replace(/"/g, '').replace(/^resource\./g, '');
       debugLog.appendLine(`debug: evaluating symbol ${resourceKey}`);
 
       if (blocks[resourceKey] !== undefined) {
@@ -496,7 +508,7 @@ class InfracostLensProvider implements CodeLensProvider {
           msg = 'loading...';
         }
 
-        const cmd = new InfracostComand(msg, block);
+        const cmd = new InfracostCommand(msg, block);
         lenses.push(new CodeLens(line.range.with(new Position(line.range.start.line, 0)), cmd));
       }
     }
@@ -505,9 +517,11 @@ class InfracostLensProvider implements CodeLensProvider {
   }
 }
 
-class InfracostComand implements Command {
-  command: string = 'infracost.resourceBreakdown';
-  arguments?: any[];
+class InfracostCommand implements Command {
+  command = 'infracost.resourceBreakdown';
+
+  arguments?: Block[];
+
   title: string;
 
   constructor(title: string, block: Block) {
@@ -524,6 +538,7 @@ function isDocumentSymbol(symbol: DocumentSymbol | SymbolInformation): symbol is
   return is<DocumentSymbol>(symbol, 'children');
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function is<T extends object>(o: T | null | undefined): o is T;
 function is<T extends object>(o: object, prop: keyof T, value?: any): o is T;
 function is<T extends object>(o: object, matcher: (o: object) => boolean): o is T;
@@ -533,6 +548,7 @@ function is<T extends object>(o: object, propOrMatcher?: keyof T | ((o: any) => 
 
   return value === undefined ? (o as any)[propOrMatcher] !== undefined : (o as any)[propOrMatcher] === value;
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 async function isValidTerraformFile(file: vscode.TextDocument): Promise<boolean> {
   const filename = file.uri.path;
@@ -546,22 +562,22 @@ async function isValidTerraformFile(file: vscode.TextDocument): Promise<boolean>
   const symbols = await commands.executeCommand<SymbolInformation[]>('vscode.executeDocumentSymbolProvider', file.uri);
   if (symbols === undefined) {
     debugLog.appendLine(`debug: no valid Terraform symbols found for file ${filename}`);
-    return false
+    return false;
   }
 
   return true;
 }
 
-function cleanFilename(filename: string): string  {
-  const replaceC = /^\/C/g
-  filename = filename.replace(replaceC, '/c')
+function cleanFilename(filename: string): string {
+  const replaceC = /^\/C/g;
+  let cleaned = filename.replace(replaceC, '/c');
 
-  if (filename.startsWith('c')) {
+  if (cleaned.startsWith('c')) {
     const slash = /\\+/gi;
-    filename = '/'+filename.replace(slash, '/');
+    cleaned = `/${cleaned.replace(slash, '/')}`;
   }
 
-  return filename;
+  return cleaned;
 }
 
 function setInfracostStatusLoading() {
@@ -574,10 +590,11 @@ function setInfracostReadyStatus() {
   infracostStatusBar.show();
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 export function deactivate() {
 }
 
-declare module infracostJSON {
+declare namespace infracostJSON {
   export interface Metadata {
     path: string;
     type: string;
@@ -586,7 +603,7 @@ declare module infracostJSON {
   }
 
   export interface PastBreakdown {
-    resources: any[];
+    resources: Resource[];
     totalHourlyCost: string;
     totalMonthlyCost: string;
   }
@@ -638,8 +655,8 @@ declare module infracostJSON {
     totalUnsupportedResources: number;
     totalUsageBasedResources: number;
     totalNoPriceResources: number;
-    unsupportedResourceCounts: any;
-    noPriceResourceCounts: any;
+    unsupportedResourceCounts: Record<string, number>;
+    noPriceResourceCounts: Record<string, number>;
   }
 
   export interface Project {
@@ -665,4 +682,3 @@ declare module infracostJSON {
     summary: Summary;
   }
 }
-
