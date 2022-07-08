@@ -349,7 +349,7 @@ class Workspace {
         const dir = path.dirname(path.normalize(filename));
 
         if (projectDir === dir) {
-          debugLog.appendLine(`debug: using project ${projectDir} for ${filename} running file change event again`);
+          debugLog.appendLine(`debug: using project ${projectDir} for ${filename}, running file change event again`);
           await this.run(projectDir);
           this.loading = false;
           setInfracostReadyStatus();
@@ -444,9 +444,9 @@ class Workspace {
       debugLog.appendLine(`error: Infracost cmd error trace ${error}`);
 
       if (init) {
-        vscode.window.showErrorMessage(`Could not run the infracost cmd in the ${path} directory. This is likely becuase of a syntax error, or invalid project. See the Infrcost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
+        vscode.window.showErrorMessage(`Could not run the infracost cmd in the ${path} directory. This is likely because of a syntax error or invalid project. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
       } else {
-        vscode.window.showErrorMessage(`Error fetching cloud costs with Infracost, please run again by saving the file or reopening the Workspace. See the Infrcost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
+        vscode.window.showErrorMessage(`Error fetching cloud costs with Infracost, please run again by saving the file or reopening the workspace. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
       }
     }
 
@@ -538,19 +538,19 @@ async function isValidTerraformFile(file: vscode.TextDocument): Promise<boolean>
   const isTfFile = /.*\.tf$/.test(filename);
 
   if (!isTfFile) {
-    debugLog.appendLine(`debug: ${filename} is not a valid terraform file extension`);
+    debugLog.appendLine(`debug: ${filename} is not a valid Terraform file extension`);
     return false;
   }
 
   const symbols = await commands.executeCommand<SymbolInformation[]>('vscode.executeDocumentSymbolProvider', file.uri);
   if (symbols === undefined) {
-    debugLog.appendLine(`debug: no valid terraform symbols found for file ${filename}`);
+    debugLog.appendLine(`debug: no valid Terraform symbols found for file ${filename}`);
     return false
   }
 
   for (const sym of symbols) {
     if (sym.name.indexOf('resource') !== -1 || sym.name.indexOf('module') !== -1) {
-      debugLog.appendLine(`debug: found valid terraform symbol ${sym.name} for file ${filename}`);
+      debugLog.appendLine(`debug: found valid Terraform symbol ${sym.name} for file ${filename}`);
       return true;
     }
   }
