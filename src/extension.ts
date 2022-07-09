@@ -51,17 +51,11 @@ async function compileTemplateFromFile(filename: string): Promise<TemplateDelega
 
 function registerTemplates(context: vscode.ExtensionContext) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Handlebars.registerHelper('eq', (arg1: any, arg2: any): boolean => (
-    arg1 === arg2
-  ));
+  Handlebars.registerHelper('eq', (arg1: any, arg2: any): boolean => arg1 === arg2);
 
-  Handlebars.registerHelper('gt', (arg1: number, arg2: number): boolean => (
-    arg1 > arg2
-  ));
+  Handlebars.registerHelper('gt', (arg1: number, arg2: number): boolean => arg1 > arg2);
 
-  Handlebars.registerHelper('add', (arg1: number, arg2: number): number => (
-    arg1 + arg2
-  ));
+  Handlebars.registerHelper('add', (arg1: number, arg2: number): number => arg1 + arg2);
 
   Handlebars.registerHelper('repeat', (n: number, block) => {
     let accum = '';
@@ -74,16 +68,14 @@ function registerTemplates(context: vscode.ExtensionContext) {
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Handlebars.registerHelper('contains', (ob: any, arg: string): boolean => (
-    ob[arg] !== undefined
-  ));
+  Handlebars.registerHelper('contains', (ob: any, arg: string): boolean => ob[arg] !== undefined);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Handlebars.registerHelper('tags', (ob: any): string => (
-    Object.keys(ob).map((k) => (
-      `${k}=${ob[k]}`
-    )).join(', ')
-  ));
+  Handlebars.registerHelper('tags', (ob: any): string =>
+    Object.keys(ob)
+      .map((k) => `${k}=${ob[k]}`)
+      .join(', ')
+  );
 
   Handlebars.registerHelper('formatPrice', (currency: string, price: number): string => {
     const formatter = new Intl.NumberFormat('en-US', {
@@ -94,24 +86,29 @@ function registerTemplates(context: vscode.ExtensionContext) {
     return formatter.format(price);
   });
 
-  Handlebars.registerHelper('formatTitleWithCurrency', (currency: string, title: string): string => {
-    if (currency === 'USD') {
-      return title;
+  Handlebars.registerHelper(
+    'formatTitleWithCurrency',
+    (currency: string, title: string): string => {
+      if (currency === 'USD') {
+        return title;
+      }
+
+      return `${title} (${currency}`;
     }
+  );
 
-    return `${title} (${currency}`;
-  });
+  Handlebars.registerHelper('increment', (i: number): number => i + 1);
 
-  Handlebars.registerHelper('increment', (i: number): number => (
-    i + 1
-  ));
+  Handlebars.registerHelper('blockCost', (block: Block): string => block.cost());
 
-  Handlebars.registerHelper('blockCost', (block: Block): string => (
-    block.cost()
-  ));
-
-  registerPartialFromFile('costComponentRow', context.asAbsolutePath(path.join('dist', costComponentRow)));
-  registerPartialFromFile('emptyTableRows', context.asAbsolutePath(path.join('dist', emptyTableRows)));
+  registerPartialFromFile(
+    'costComponentRow',
+    context.asAbsolutePath(path.join('dist', costComponentRow))
+  );
+  registerPartialFromFile(
+    'emptyTableRows',
+    context.asAbsolutePath(path.join('dist', emptyTableRows))
+  );
   registerPartialFromFile('resourceRows', context.asAbsolutePath(path.join('dist', resourceRows)));
   registerPartialFromFile('tableHeaders', context.asAbsolutePath(path.join('dist', tableHeader)));
 }
@@ -119,7 +116,9 @@ function registerTemplates(context: vscode.ExtensionContext) {
 async function isExtensionValid(): Promise<boolean> {
   const terraformExtension = vscode.extensions.getExtension('HashiCorp.terraform');
   if (terraformExtension === undefined) {
-    vscode.window.showErrorMessage('The Hashicorp Terraform extension is required for the Infracost extension to work. Please install it: https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform.');
+    vscode.window.showErrorMessage(
+      'The Hashicorp Terraform extension is required for the Infracost extension to work. Please install it: https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform.'
+    );
     return false;
   }
 
@@ -128,11 +127,15 @@ async function isExtensionValid(): Promise<boolean> {
     const { stdout } = await util.promisify(exec)(cmd);
     const version = stdout.replace('Infracost ', '');
     if (!gte(version, '0.10.6')) {
-      vscode.window.showErrorMessage('The Infracost extension requires at least version v0.10.6 of the Infracost CLI. Please upgrade your CLI.');
+      vscode.window.showErrorMessage(
+        'The Infracost extension requires at least version v0.10.6 of the Infracost CLI. Please upgrade your CLI.'
+      );
       return false;
     }
   } catch (error) {
-    vscode.window.showErrorMessage('The Infracost extension requires the Infracost CLI to function. Please install it: https://www.infracost.io/docs/#1-install-infracost.');
+    vscode.window.showErrorMessage(
+      'The Infracost extension requires the Infracost CLI to function. Please install it: https://www.infracost.io/docs/#1-install-infracost.'
+    );
     return false;
   }
 
@@ -140,7 +143,7 @@ async function isExtensionValid(): Promise<boolean> {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-  if (!await isExtensionValid()) {
+  if (!(await isExtensionValid())) {
     return;
   }
 
@@ -152,14 +155,22 @@ export async function activate(context: vscode.ExtensionContext) {
   setInfracostStatusLoading();
 
   registerTemplates(context);
-  const template = await compileTemplateFromFile(context.asAbsolutePath(path.join('dist', blockOutput)));
+  const template = await compileTemplateFromFile(
+    context.asAbsolutePath(path.join('dist', blockOutput))
+  );
   const w = new Workspace(template);
   await w.init();
 
-  const disposable = vscode.commands.registerCommand('infracost.resourceBreakdown', Workspace.show.bind(w));
+  const disposable = vscode.commands.registerCommand(
+    'infracost.resourceBreakdown',
+    Workspace.show.bind(w)
+  );
 
   context.subscriptions.push(disposable);
-  languages.registerCodeLensProvider([{ scheme: 'file', pattern: '**/*.tf' }], new InfracostLensProvider(w));
+  languages.registerCodeLensProvider(
+    [{ scheme: 'file', pattern: '**/*.tf' }],
+    new InfracostLensProvider(w)
+  );
   vscode.workspace.onDidSaveTextDocument(w.fileChange.bind(w));
   setInfracostReadyStatus();
 }
@@ -275,12 +286,11 @@ class Block {
       this.name,
       { viewColumn: vscode.ViewColumn.Beside, preserveFocus: false },
       {
-
         retainContextWhenHidden: true,
         enableFindWidget: true,
         enableCommandUris: true,
         enableScripts: true,
-      },
+      }
     );
     this.webview = wp;
     webviews[`${this.filename}|${this.name}`] = wp;
@@ -358,7 +368,9 @@ class Workspace {
 
     const projects = this.filesToProjects[filename];
     if (projects === undefined) {
-      debugLog.appendLine(`debug: no valid projects found for path ${filename} attempting to locate project for file`);
+      debugLog.appendLine(
+        `debug: no valid projects found for path ${filename} attempting to locate project for file`
+      );
 
       for (const project of Object.keys(this.projects)) {
         const projectDir = path.normalize(cleanFilename(project));
@@ -366,7 +378,9 @@ class Workspace {
         debugLog.appendLine(`debug: evaluating if ${filename} is within project ${projectDir}`);
 
         if (projectDir === dir) {
-          debugLog.appendLine(`debug: using project ${project} for ${filename}, running file change event again`);
+          debugLog.appendLine(
+            `debug: using project ${project} for ${filename}, running file change event again`
+          );
           await this.run(project);
           this.loading = false;
           setInfracostReadyStatus();
@@ -448,7 +462,9 @@ class Workspace {
       if (error instanceof Error) {
         const msg = error.message ?? '';
         if (msg.toLowerCase().includes('no infracost_api_key environment')) {
-          vscode.window.showErrorMessage('Please register your infracost CLI by running `infracost register` in your terminal.');
+          vscode.window.showErrorMessage(
+            'Please register your infracost CLI by running `infracost register` in your terminal.'
+          );
           return undefined;
         }
       }
@@ -456,9 +472,13 @@ class Workspace {
       debugLog.appendLine(`error: Infracost cmd error trace ${error}`);
 
       if (init) {
-        vscode.window.showErrorMessage(`Could not run the infracost cmd in the ${path} directory. This is likely because of a syntax error or invalid project. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`);
+        vscode.window.showErrorMessage(
+          `Could not run the infracost cmd in the ${path} directory. This is likely because of a syntax error or invalid project. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`
+        );
       } else {
-        vscode.window.showErrorMessage('Error fetching cloud costs with Infracost, please run again by saving the file or reopening the workspace. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.');
+        vscode.window.showErrorMessage(
+          'Error fetching cloud costs with Infracost, please run again by saving the file or reopening the workspace. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.'
+        );
       }
     }
 
@@ -483,7 +503,10 @@ class InfracostLensProvider implements CodeLensProvider {
 
     const blocks = this.workspace.project(filename);
 
-    const symbols = await commands.executeCommand<SymbolInformation[]>('vscode.executeDocumentSymbolProvider', document.uri);
+    const symbols = await commands.executeCommand<SymbolInformation[]>(
+      'vscode.executeDocumentSymbolProvider',
+      document.uri
+    );
     if (symbols === undefined) {
       debugLog.appendLine(`debug: no valid symbols found for file ${filename}`);
       return lenses;
@@ -495,7 +518,10 @@ class InfracostLensProvider implements CodeLensProvider {
       }
 
       const line = document.lineAt(getRangeFromSymbol(sym).start);
-      const resourceKey = sym.name.replace(/\s+/g, '.').replace(/"/g, '').replace(/^resource\./g, '');
+      const resourceKey = sym.name
+        .replace(/\s+/g, '.')
+        .replace(/"/g, '')
+        .replace(/^resource\./g, '');
       debugLog.appendLine(`debug: evaluating symbol ${resourceKey}`);
 
       if (blocks[resourceKey] !== undefined) {
@@ -542,11 +568,17 @@ function isDocumentSymbol(symbol: DocumentSymbol | SymbolInformation): symbol is
 function is<T extends object>(o: T | null | undefined): o is T;
 function is<T extends object>(o: object, prop: keyof T, value?: any): o is T;
 function is<T extends object>(o: object, matcher: (o: object) => boolean): o is T;
-function is<T extends object>(o: object, propOrMatcher?: keyof T | ((o: any) => boolean), value?: any): o is T {
+function is<T extends object>(
+  o: object,
+  propOrMatcher?: keyof T | ((o: any) => boolean),
+  value?: any
+): o is T {
   if (propOrMatcher == null) return o != null;
   if (typeof propOrMatcher === 'function') return propOrMatcher(o);
 
-  return value === undefined ? (o as any)[propOrMatcher] !== undefined : (o as any)[propOrMatcher] === value;
+  return value === undefined
+    ? (o as any)[propOrMatcher] !== undefined
+    : (o as any)[propOrMatcher] === value;
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -559,7 +591,10 @@ async function isValidTerraformFile(file: vscode.TextDocument): Promise<boolean>
     return false;
   }
 
-  const symbols = await commands.executeCommand<SymbolInformation[]>('vscode.executeDocumentSymbolProvider', file.uri);
+  const symbols = await commands.executeCommand<SymbolInformation[]>(
+    'vscode.executeDocumentSymbolProvider',
+    file.uri
+  );
   if (symbols === undefined) {
     debugLog.appendLine(`debug: no valid Terraform symbols found for file ${filename}`);
     return false;
@@ -591,8 +626,7 @@ function setInfracostReadyStatus() {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
-export function deactivate() {
-}
+export function deactivate() {}
 
 declare namespace infracostJSON {
   export interface Metadata {
