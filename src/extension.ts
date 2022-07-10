@@ -16,6 +16,7 @@ import {
   Position,
   SymbolInformation,
   TextDocument,
+  TreeItemCollapsibleState,
 } from 'vscode';
 import tableHeader from './templates/table-headers.hbs';
 import costComponentRow from './templates/cost-component-row.hbs';
@@ -85,7 +86,6 @@ function registerTemplates(context: vscode.ExtensionContext) {
 
     return formatter.format(price);
   });
-
   Handlebars.registerHelper(
     'formatTitleWithCurrency',
     (currency: string, title: string): string => {
@@ -123,12 +123,12 @@ async function isExtensionValid(): Promise<boolean> {
   }
 
   try {
-    const cmd = 'infracost --version';
+    const cmd = `infracost --version`;
     const { stdout } = await util.promisify(exec)(cmd);
     const version = stdout.replace('Infracost ', '');
     if (!gte(version, '0.10.6')) {
       vscode.window.showErrorMessage(
-        'The Infracost extension requires at least version v0.10.6 of the Infracost CLI. Please upgrade your CLI.'
+        `The Infracost extension requires at least version v0.10.6 of the Infracost CLI. Please upgrade your CLI.`
       );
       return false;
     }
@@ -158,15 +158,22 @@ export async function activate(context: vscode.ExtensionContext) {
   const template = await compileTemplateFromFile(
     context.asAbsolutePath(path.join('dist', blockOutput))
   );
-  const w = new Workspace(template);
+  const folders = vscode.workspace.workspaceFolders;
+  if (!folders || folders?.length === 0) {
+    return;
+  }
+
+  const root = folders[0].uri.fsPath.toString();
+
+  const treeEmitter = new vscode.EventEmitter<TreeItem | undefined | void>();
+  const w = new Workspace(root, template, treeEmitter);
+  const projectProvider = new InfracostProjectProvider(w, treeEmitter);
+  vscode.commands.registerCommand('infracost.refresh', () => projectProvider.refresh());
+  vscode.window.registerTreeDataProvider('infracostProjects', projectProvider);
   await w.init();
 
-  const disposable = vscode.commands.registerCommand(
-    'infracost.resourceBreakdown',
-    Workspace.show.bind(w)
-  );
+  vscode.commands.registerCommand('infracost.resourceBreakdown', Workspace.show.bind(w));
 
-  context.subscriptions.push(disposable);
   languages.registerCodeLensProvider(
     [{ scheme: 'file', pattern: '**/*.tf' }],
     new InfracostLensProvider(w)
@@ -176,72 +183,97 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 class Project {
-  name: string;
-
-  currency: string;
-
-  template: TemplateDelegate;
-
   files: { [key: string]: File } = {};
 
-  constructor(name: string, currency: string, template: TemplateDelegate) {
-    this.name = name;
-    this.currency = currency;
-    this.template = template;
-  }
+  blocks: { [key: string]: Block } = {};
 
-  file(name: string): File {
-    if (this.files[name] === undefined) {
-      this.files[name] = new File(name, this.currency, this.template);
+  constructor(public name: string, public currency: string, public template: TemplateDelegate) {}
+
+  setBlock(filename: string, name: string): Block {
+    if (this.files[filename] === undefined) {
+      this.files[filename] = new File(filename, this.currency, this.template);
     }
 
-    return this.files[name];
+    const file = this.files[filename];
+    const block = file.setBlock(name);
+
+    if (this.blocks[name] === undefined) {
+      this.blocks[name] = block;
+    }
+
+    return block;
+  }
+
+  getBlock(filename: string, name: string): Block | undefined {
+    if (this.files[filename] === undefined) {
+      return undefined;
+    }
+
+    return this.files[filename].getBlock(name);
+  }
+
+  cost(): string {
+    const cost = Object.values(this.blocks).reduce(
+      (total: number, b: Block): number => total + b.rawCost(),
+      0
+    );
+
+    const formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: this.currency,
+    });
+
+    return formatter.format(cost);
   }
 }
 
 class File {
-  name: string;
-
-  currency: string;
-
-  template: TemplateDelegate;
-
   blocks: { [key: string]: Block } = {};
 
-  constructor(name: string, currency: string, template: TemplateDelegate) {
-    this.name = name;
-    this.currency = currency;
-    this.template = template;
+  constructor(public name: string, public currency: string, public template: TemplateDelegate) {}
+
+  rawCost(): number {
+    return Object.values(this.blocks).reduce(
+      (total: number, b: Block): number => total + b.rawCost(),
+      0
+    );
   }
 
-  block(name: string): Block {
+  cost(): string {
+    const cost = this.rawCost();
+
+    const formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: this.currency,
+    });
+
+    return formatter.format(cost);
+  }
+
+  setBlock(name: string): Block {
     if (this.blocks[name] === undefined) {
       this.blocks[name] = new Block(name, this.name, this.currency, this.template);
     }
 
     return this.blocks[name];
   }
+
+  getBlock(name: string): Block | undefined {
+    return this.blocks[name];
+  }
 }
 
 class Block {
-  name: string;
-
-  filename: string;
-
-  currency: string;
-
-  template: TemplateDelegate;
-
   resources: infracostJSON.Resource[] = [];
 
   webview: vscode.WebviewPanel | undefined;
 
-  constructor(name: string, filename: string, currency: string, template: TemplateDelegate) {
-    this.name = name;
-    this.filename = filename;
-    this.currency = currency;
-    this.template = template;
-
+  constructor(
+    public name: string,
+    public filename: string,
+    public currency: string,
+    public template: TemplateDelegate
+  ) {
     if (webviews[this.key()] !== undefined) {
       this.webview = webviews[this.key()];
       this.webview.onDidDispose(() => {
@@ -255,7 +287,7 @@ class Block {
     return `${this.filename}|${this.name}`;
   }
 
-  cost(): string {
+  rawCost(): number {
     let cost = 0;
 
     for (const r of this.resources) {
@@ -265,6 +297,12 @@ class Block {
 
       cost = +cost + +r.monthlyCost;
     }
+
+    return cost;
+  }
+
+  cost(): string {
+    const cost = this.rawCost();
 
     const formatter = new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -314,30 +352,33 @@ class Workspace {
 
   codeLensEventEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
 
-  blockTemplate: TemplateDelegate;
-
   isError = false;
 
-  constructor(blockTemplate: TemplateDelegate) {
-    this.blockTemplate = blockTemplate;
-  }
+  constructor(
+    public root: string,
+    private blockTemplate: TemplateDelegate,
+    private treeRenderEventEmitter: vscode.EventEmitter<TreeItem | undefined | void>
+  ) {}
 
   async init() {
-    debugLog.appendLine('debug: initializing workspace');
+    setInfracostStatusLoading();
+    debugLog.appendLine(`debug: initializing workspace`);
+    this.projects = {};
+    this.filesToProjects = {};
+    this.loading = true;
+    this.isError = false;
 
-    const folders = vscode.workspace.workspaceFolders;
-    if (!folders || folders?.length === 0) {
-      return;
-    }
-
-    const root = folders[0].uri.fsPath.toString();
-    const out = await this.run(root, true);
+    const out = await this.run(this.root, true);
     if (out === undefined) {
       this.isError = true;
+      this.loading = false;
+      setInfracostReadyStatus();
       return;
     }
 
     this.isError = false;
+    this.loading = false;
+    setInfracostReadyStatus();
   }
 
   static show(block: Block) {
@@ -409,16 +450,16 @@ class Workspace {
 
     if (Object.keys(projects).length > 0) {
       const project = Object.keys(projects)[0];
-      return this.projects[project].file(filename).blocks;
+      return this.projects[project].blocks;
     }
 
     return {};
   }
 
-  async run(path: string, init = false): Promise<infracostJSON.RootObject | undefined> {
-    debugLog.appendLine(`debug: running Infracost in project: ${path}`);
+  async run(projectPath: string, init = false): Promise<infracostJSON.RootObject | undefined> {
+    debugLog.appendLine(`debug: running Infracost in project: ${projectPath}`);
     try {
-      let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path ${path} --format json --log-level info`;
+      let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path ${projectPath} --format json --log-level info`;
 
       if (os.platform() === 'win32') {
         cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path ${path} --format json --log-level info"`;
@@ -430,7 +471,7 @@ class Workspace {
       const body = <infracostJSON.RootObject>JSON.parse(stdout);
 
       for (const project of body.projects) {
-        debugLog.appendLine(`debug: found project ${project}`);
+        debugLog.appendLine(`debug: found project ${project.name}`);
 
         const projectPath = project.metadata.path;
         const formatted = new Project(projectPath, body.currency, this.blockTemplate);
@@ -439,7 +480,7 @@ class Workspace {
             const filename = cleanFilename(call.filename);
             debugLog.appendLine(`debug: adding file: ${filename} to project: ${projectPath}`);
 
-            formatted.file(filename).block(call.blockName).resources.push(resource);
+            formatted.setBlock(filename, call.blockName).resources.push(resource);
 
             if (this.filesToProjects[filename] === undefined) {
               this.filesToProjects[filename] = {};
@@ -453,8 +494,13 @@ class Workspace {
         this.projects[projectPath] = formatted;
         Object.keys(webviews).forEach((key) => {
           const [filename, blockname] = key.split('|');
-          formatted.file(filename).block(blockname).display();
+          formatted.getBlock(filename, blockname)?.display();
         });
+
+        if (!init) {
+          debugLog.appendLine('debug: rebuilding Infracost tree view after project run');
+          this.treeRenderEventEmitter.fire();
+        }
       }
 
       return body;
@@ -473,11 +519,11 @@ class Workspace {
 
       if (init) {
         vscode.window.showErrorMessage(
-          `Could not run the infracost cmd in the ${path} directory. This is likely because of a syntax error or invalid project. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`
+          `Could not run the infracost cmd in the ${projectPath} directory. This is likely because of a syntax error or invalid project. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`
         );
       } else {
         vscode.window.showErrorMessage(
-          'Error fetching cloud costs with Infracost, please run again by saving the file or reopening the workspace. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.'
+          `Error fetching cloud costs with Infracost, please run again by saving the file or reopening the workspace. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`
         );
       }
     }
@@ -513,7 +559,10 @@ class InfracostLensProvider implements CodeLensProvider {
     }
 
     for (const sym of symbols) {
+      debugLog.appendLine(`debug: evaluating symbol: ${sym.name}`);
+
       if (sym.name.indexOf('resource') === -1 && sym.name.indexOf('module') === -1) {
+        debugLog.appendLine(`debug: skipping symbol as not supported for Infracost costs`);
         continue;
       }
 
@@ -522,21 +571,27 @@ class InfracostLensProvider implements CodeLensProvider {
         .replace(/\s+/g, '.')
         .replace(/"/g, '')
         .replace(/^resource\./g, '');
-      debugLog.appendLine(`debug: evaluating symbol ${resourceKey}`);
+
+      debugLog.appendLine(`debug: finding symbol cost using key: ${resourceKey}`);
 
       if (blocks[resourceKey] !== undefined) {
-        debugLog.appendLine(`debug: found Infracost price for symbol ${resourceKey}`);
         const block = blocks[resourceKey];
         const cost = block.cost();
+        debugLog.appendLine(
+          `debug: found Infracost price for symbol: ${resourceKey} cost: ${cost}`
+        );
 
         let msg = `Total monthly cost: ${cost}`;
-        if (this.workspace.loading === true) {
+        if (this.workspace.loading) {
           msg = 'loading...';
         }
 
         const cmd = new InfracostCommand(msg, block);
         lenses.push(new CodeLens(line.range.with(new Position(line.range.start.line, 0)), cmd));
+        continue;
       }
+
+      debugLog.appendLine(`debug: no registered blocks matching key: ${resourceKey}`);
     }
 
     return lenses;
@@ -714,5 +769,161 @@ declare namespace infracostJSON {
     diffTotalMonthlyCost: string;
     timeGenerated: Date;
     summary: Summary;
+  }
+}
+
+export class InfracostProjectProvider implements vscode.TreeDataProvider<TreeItem> {
+  /** set hardRefresh as true initially so that the loading indicator is shown */
+  private hardRefresh = true;
+
+  readonly onDidChangeTreeData: vscode.Event<TreeItem | undefined | void>;
+
+  constructor(
+    private workspace: Workspace,
+    private eventEmitter: vscode.EventEmitter<TreeItem | undefined | void>
+  ) {
+    this.onDidChangeTreeData = eventEmitter.event;
+  }
+
+  async refresh() {
+    this.hardRefresh = true;
+    this.eventEmitter.fire();
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  getTreeItem(element: TreeItem): vscode.TreeItem {
+    return element;
+  }
+
+  async getChildren(element?: TreeItem): Promise<TreeItem[]> {
+    if (element == null && this.hardRefresh) {
+      await this.workspace.init();
+      this.hardRefresh = false;
+    }
+
+    if (!this.workspace) {
+      vscode.window.showInformationMessage('Empty workspace');
+      return Promise.resolve([]);
+    }
+
+    if (element && element.type === 'file') {
+      const [projectName, filename] = element.key.split('|');
+      const uri = vscode.Uri.file(filename);
+      const symbols = await commands.executeCommand<SymbolInformation[]>(
+        'vscode.executeDocumentSymbolProvider',
+        uri
+      );
+
+      return Promise.resolve(
+        Object.values(this.workspace.projects[projectName].blocks)
+          .sort((a: Block, b: Block): number => b.rawCost() - a.rawCost())
+          .reduce((arr: TreeItem[], b: Block): TreeItem[] => {
+            if (filename === b.filename) {
+              let cmd: JumpToDefinitionCommand | undefined;
+              if (symbols !== undefined) {
+                for (const sym of symbols) {
+                  const key = sym.name
+                    .replace(/\s+/g, '.')
+                    .replace(/"/g, '')
+                    .replace(/^resource\./g, '');
+                  if (key === b.name) {
+                    cmd = new JumpToDefinitionCommand('Go to Definition', uri, sym.location);
+                    break;
+                  }
+                }
+              }
+
+              const item = new TreeItem(
+                b.key(),
+                b.name,
+                b.cost(),
+                TreeItemCollapsibleState.None,
+                'block',
+                'cash.svg',
+                cmd
+              );
+              arr.push(item);
+            }
+
+            return arr;
+          }, [])
+      );
+    }
+
+    if (element && element.type === 'project') {
+      return Promise.resolve(
+        Object.values(this.workspace.projects[element.key].files)
+          .sort((a: File, b: File): number => b.rawCost() - a.rawCost())
+          .reduce((arr: TreeItem[], f: File): TreeItem[] => {
+            const name = path.basename(f.name);
+            const filePath = path.relative(element.key, f.name);
+
+            if (filePath === name) {
+              const item = new TreeItem(
+                `${element.key}|${f.name}`,
+                name,
+                f.cost(),
+                TreeItemCollapsibleState.Collapsed,
+                'file',
+                'terraform.svg'
+              );
+              arr.push(item);
+            }
+
+            return arr;
+          }, [])
+      );
+    }
+
+    return Promise.resolve(
+      Object.values(this.workspace.projects).map((p: Project): TreeItem => {
+        const local = path.relative(this.workspace?.root ?? '', p.name);
+        return new TreeItem(
+          p.name,
+          local,
+          p.cost(),
+          TreeItemCollapsibleState.Collapsed,
+          'project',
+          'cloud.svg'
+        );
+      })
+    );
+  }
+}
+
+class TreeItem extends vscode.TreeItem {
+  constructor(
+    public readonly key: string,
+    public readonly label: string,
+    private readonly price: string,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
+    public readonly type: string,
+    public readonly icon?: string,
+    public readonly command?: vscode.Command
+  ) {
+    super(label, collapsibleState);
+
+    this.tooltip = `${this.label}`;
+    this.description = this.price;
+    this.contextValue = type;
+    if (this.icon) {
+      this.iconPath = {
+        light: path.join(__filename, '..', '..', 'resources', 'light', this.icon),
+        dark: path.join(__filename, '..', '..', 'resources', 'dark', this.icon),
+      };
+    }
+  }
+}
+
+class JumpToDefinitionCommand implements Command {
+  command = 'vscode.open';
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  arguments: any[] = [];
+
+  constructor(public title: string, uri: vscode.Uri, location: vscode.Location) {
+    this.arguments.push(uri, {
+      selection: location.range,
+    });
   }
 }
