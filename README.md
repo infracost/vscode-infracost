@@ -54,7 +54,7 @@ Navigate to any Terraform file, if you've done the prior steps correctly you'll 
 
 [Use our CI/CD integrations](https://www.infracost.io/docs/integrations/cicd/) to add cost estimates to pull requests. This provides your team with a safety net as people can understand cloud costs upfront, and discuss them as part of your workflow.
 
-![](https://github.com/infracost/vscode-infracost/blob/tweaks/.github/assets/cicd-integration.png?raw=true)
+![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/cicd-integration.png?raw=true)
 
 ## Requirements
 
