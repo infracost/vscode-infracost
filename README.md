@@ -2,32 +2,30 @@
 
 Infracost's VSCode extension shows you cost estimates for Terraform right in your editor! Prevent costly infrastructure changes before they get into production.
 
+This helps with a few use-cases:
+- **Compare configs, instance types, regions etc**: copy/paste a code block, make changes and compare them.
+- **Quick cost estimate**: write a code block and get a cost estimate without having to use AWS, Azure or Google cost calculators, or read the long/complicated pricing web pages.
+- **Catch costly typos**: if you accidentally type 22 instead of 2 as the instance count, or 1000GB volume size instead of 100, the cost estimate will immediately pick that up and let you know.
+
 ## Features
 
-Infracost's extension shows a snapshot of the total cost of resources right above their Terraform definitions. Infracost's output updates on file save. This helps with a few use-cases:
-- **Compare configs, instance types, regions etc**: copy/paste a code block, make changes and compare them.
-- **Quick cost estimate**: write a code block and get a cost estimate without having to use AWS, Google or Azure cost calculators, or read the long/complicated pricing web pages.
-- **Catch costly typos**: if you accidentally type 22 instead of 2 as the instance count, or 1000GB volume size instead of 100, the cost estimate will immediately pick that up and let you know.
+See cost estimates right above their Terraform definitions. Infracost's output updates on file save.
 
 ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/resources.gif?raw=true)
 
-Both `resource` and `module` blocks support showing cost estimates. Infracost's VSCode extension even supports showing prices on **3rd party module blocks**! 
+### Works with resources and modules
+
+Both `resource` and `module` blocks are supported. **3rd party module blocks** are also supported!
 
 ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/modules.gif?raw=true)
 
-If a simple monthly cost isn't enough for you, just click the overview to show a detailed breakdown of what components affect the price.
+### See cost breakdown
+
+If a simple monthly cost isn't enough for you, just click the overview to see a cost breakdown.
 
 ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/webview.gif?raw=true)
 
-
-## Demo
-
-Check out the video below to see the Infracost extension in action!
-
-[![Extension Demo](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/videooverlay.png?raw=true))](https://user-images.githubusercontent.com/6455139/169564807-320bbbf7-647f-4248-882f-2a6bbf9449b2.mp4)
-
-
-## Getting started
+## Get started
 
 ### 1. Install Infracost CLI
 
@@ -51,7 +49,13 @@ This will also install the the [Hashicorp Terraform extension](https://marketpla
 
 Navigate to any Terraform file, if you've done the prior steps correctly you'll see costs above [supported blocks](https://www.infracost.io/docs/supported_resources/overview/).
    ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/maintf.png?raw=true)
-  
+
+### 5. Cost estimates in pull requests
+
+[Use our CI/CD integrations](https://www.infracost.io/docs/integrations/cicd/) to add cost estimates to pull requests. This provides your team with a safety net as people can understand cloud costs upfront, and discuss them as part of your workflow.
+
+![](https://github.com/infracost/vscode-infracost/blob/tweaks/.github/assets/cicd-integration.png?raw=true)
+
 ## Requirements
 
 The Infracost VSCode extension requires you to have:
