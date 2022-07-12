@@ -25,6 +25,12 @@ If a simple monthly cost isn't enough for you, just click the overview to see a 
 
 ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/webview.gif?raw=true)
 
+### Navigate your projects by costs
+
+See a tree overview of your Infrastructure costs. See which projects, files and blocks have the most impact to your budget.
+
+![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/tree-view.gif?raw=true)
+
 ## Get started
 
 ### 1. Install Infracost CLI

@@ -2,7 +2,7 @@
 	"name": "infracost",
 	"displayName": "Infracost",
 	"description": "Cloud cost estimates for Terraform in your editor",
-	"version": "0.1.12",
+	"version": "0.1.13",
 	"publisher": "Infracost",
 	"license": "Apache-2.0",
 	"icon": "infracost-logo.png",
@@ -31,12 +31,49 @@
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "infracost-projects",
+					"title": "Infracost",
+					"icon": "media/infracost.svg"
+				}
+			]
+		},
+		"views": {
+			"infracost-projects": [
+				{
+					"id": "infracostProjects",
+					"name": "Projects overview",
+					"icon": "media/infracost.svg",
+					"contextualTitle": "Infracost Projects"
+				}
+			]
+		},
 		"commands": [
 			{
 				"command": "infracost.resourceBreakdown",
 				"title": "Show all the cost components for a given resource"
+			},
+			{
+				"command": "infracost.refresh",
+				"title": "Refresh",
+				"icon": {
+					"light": "resources/light/refresh.svg",
+					"dark": "resources/dark/refresh.svg"
+				}
 			}
-		]
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "infracost.refresh",
+					"when": "view == infracostProjects",
+					"group": "navigation"
+				}
+			],
+			"view/item/context": [ ]
+		}
 	},
 	"scripts": {
 		"vscode:package": "vsce package --yarn",
@@ -45,7 +82,7 @@
 		"watch": "webpack --watch",
 		"package": "webpack --mode production --devtool hidden-source-map",
 		"lint": "eslint src --ext ts,js --ignore-path .eslintignore --ignore-path .gitignore . --max-warnings=0",
-		"lint:fix": "eslint src --ext ts,js --ignore-path .eslintignore --ignore-path .gitignore . --max-warnings=0",
+		"lint:fix": "eslint src --fix --ext ts,js --ignore-path .eslintignore --ignore-path .gitignore . ",
 		"format": "prettier --write 'src/**/*.{js,ts}'",
 		"format:check": "prettier --check 'src/**/*.{js,ts}'"
 	},
