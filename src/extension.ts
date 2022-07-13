@@ -462,7 +462,7 @@ class Workspace {
       let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path ${projectPath} --format json --log-level info`;
 
       if (os.platform() === 'win32') {
-        cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path ${path} --format json --log-level info"`;
+        cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path ${projectPath} --format json --log-level info"`;
       }
 
       debugLog.appendLine(`debug: running Infracost cmd ${cmd}`);
