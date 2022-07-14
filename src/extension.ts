@@ -459,10 +459,10 @@ class Workspace {
   async run(projectPath: string, init = false): Promise<infracostJSON.RootObject | undefined> {
     debugLog.appendLine(`debug: running Infracost in project: ${projectPath}`);
     try {
-      let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path ${projectPath} --format json --log-level info`;
+      let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path "${projectPath}" --format json --log-level info`;
 
       if (os.platform() === 'win32') {
-        cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path ${projectPath} --format json --log-level info"`;
+        cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path "${projectPath}" --format json --log-level info"`;
       }
 
       debugLog.appendLine(`debug: running Infracost cmd ${cmd}`);
