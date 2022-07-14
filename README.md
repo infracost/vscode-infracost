@@ -75,8 +75,7 @@ The Infracost VSCode extension requires you to have:
 ### How can I supply input variables to Infracost VSCode extension?
 
 To supply input variables for your Terraform projects, you must include a var file called `terraform.tfvars` at the root level of your Terraform project.
-Alternatively, you can use several files with the suffix `*.auto.tfvars`, e.g. `dev.auto.tfvars` or `prod.auto.tfvars`. Currently, only HCL variable files are supported
-you can follow [this issue](https://github.com/infracost/infracost/issues/1773) for updates on support for JSON variable files.
+Alternatively, you can use several files with the suffix `*.auto.tfvars`, e.g. `dev.auto.tfvars` or `prod.auto.tfvars`. Both HCL and JSON var files are supported, JSON var files must include a `.json` suffix. 
 
 ### How can I configure the currency Infracost uses?
 
