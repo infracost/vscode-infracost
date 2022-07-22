@@ -3,3 +3,4 @@ dist
 node_modules
 .DS_Store
 infracost-*.vsix
+bin/
