@@ -1,6 +1,7 @@
 import { exec } from 'child_process';
 import { readFile } from 'fs/promises';
 import { create, TemplateDelegate } from 'handlebars';
+import { existsSync } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { gte } from 'semver';
@@ -459,10 +460,14 @@ class Workspace {
   async run(projectPath: string, init = false): Promise<infracostJSON.RootObject | undefined> {
     debugLog.appendLine(`debug: running Infracost in project: ${projectPath}`);
     try {
-      let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path "${projectPath}" --format json --log-level info`;
+      const usageFileOption =
+        existsSync(`${projectPath}/infracost-usage.yml`) === true
+          ? ` --usage-file "${projectPath}/infracost-usage.yml"`
+          : '';
+      let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path "${projectPath}" ${usageFileOption} --format json --log-level info`;
 
       if (os.platform() === 'win32') {
-        cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path "${projectPath}" --format json --log-level info"`;
+        cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path "${projectPath}" ${usageFileOption} --format json --log-level info"`;
       }
 
       debugLog.appendLine(`debug: running Infracost cmd ${cmd}`);
@@ -640,6 +645,12 @@ function is<T extends object>(
 async function isValidTerraformFile(file: vscode.TextDocument): Promise<boolean> {
   const filename = file.uri.path;
   const isTfFile = /.*\.tf$/.test(filename);
+  const isUsageFile = /.*infracost-usage\.yml$/.test(filename);
+
+  if (isUsageFile) {
+    debugLog.appendLine(`debug: ${filename} is a valid usage file`);
+    return true;
+  }
 
   if (!isTfFile) {
     debugLog.appendLine(`debug: ${filename} is not a valid Terraform file extension`);

@@ -3,6 +3,7 @@
 Infracost's VSCode extension shows you cost estimates for Terraform right in your editor! Prevent costly infrastructure changes before they get into production.
 
 This helps with a few use-cases:
+
 - **Compare configs, instance types, regions etc**: copy/paste a code block, make changes and compare them.
 - **Quick cost estimate**: write a code block and get a cost estimate without having to use AWS, Azure or Google cost calculators, or read the long/complicated pricing web pages.
 - **Catch costly typos**: if you accidentally type 22 instead of 2 as the instance count, or 1000GB volume size instead of 100, the cost estimate will immediately pick that up and let you know.
@@ -66,39 +67,39 @@ Navigate to any Terraform file, if you've done the prior steps correctly you'll 
 
 The Infracost VSCode extension requires you to have:
 
-* VSCode **v1.67.0** or above.
-* Infracost CLI version **v0.10.6** or above [installed](https://www.infracost.io/docs) and registered with a valid API key.
-* The [Terraform VSCode extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) installed and enabled in VSCode.
+- VSCode **v1.67.0** or above.
+- Infracost CLI version **v0.10.6** or above [installed](https://www.infracost.io/docs) and registered with a valid API key.
+- The [Terraform VSCode extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) installed and enabled in VSCode.
 
 ## FAQs
 
 ### How can I supply input variables to Infracost VSCode extension?
 
 To supply input variables for your Terraform projects, you must include a var file called `terraform.tfvars` at the root level of your Terraform project.
-Alternatively, you can use several files with the suffix `*.auto.tfvars`, e.g. `dev.auto.tfvars` or `prod.auto.tfvars`. Both HCL and JSON var files are supported, JSON var files must include a `.json` suffix. 
+Alternatively, you can use several files with the suffix `*.auto.tfvars`, e.g. `dev.auto.tfvars` or `prod.auto.tfvars`. Both HCL and JSON var files are supported, JSON var files must include a `.json` suffix.
 
 ### How can I configure the currency Infracost uses?
 
 To set the currency, run `infracost configure set currency EUR` (or any other ISO 4217 currency code). [This FAQ](https://www.infracost.io/docs/faq/#can-i-show-costs-in-a-different-currency) has more details.
 
+### How can I specify the Infracost [usage files](https://www.infracost.io/docs/features/usage_based_resources/)
+
+To specify the Infracost usage files in your project you must add a file called `infracost-usage.yml` at the root of your project.
+
 ## Troubleshooting
 
 ### Known Issues
 
-* When opening a workspace with a large number of Terraform projects for the first time. Infracost will evaluate all the projects and download any required modules. This means
+- When opening a workspace with a large number of Terraform projects for the first time. Infracost will evaluate all the projects and download any required modules. This means
   that it might take some time before pricing information is available. If you're worried that Infracost VSCode extension isn't working in your workspace but haven't got
   any error messages, it is likely that Infracost is still indexing your workspace. The extension has a status bar on the right-hand side of the editor which will show a loading state
   when Infracost is running.
 
   ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/loading.png?raw=true)  
-* Terragrunt is not supported. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/4) for more information for future updates about Terragrunt support.
-* Infracost [usage files](https://www.infracost.io/docs/features/usage_based_resources/) are not yet supported. This means that resources that solely use usage costs will have a `0.00` cost shown:
- 
-  ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/zero-cost.png?raw=true)
+- Terragrunt is not supported. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/4) for more information for future updates about Terragrunt support.
 
-  Follow [this issue](https://github.com/infracost/vscode-infracost/issues/6) to receive updates on usage file support.
-* [Diff functionality](https://www.infracost.io/docs/features/cli_commands/#diff) is not yet supported. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/8) to receive updates on diff support.
-* VSCode Infracost does not yet work with Infracost [config files](https://www.infracost.io/docs/features/config_file/). Multi project support is available using Infracost native auto-detection.
+- [Diff functionality](https://www.infracost.io/docs/features/cli_commands/#diff) is not yet supported. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/8) to receive updates on diff support.
+- VSCode Infracost does not yet work with Infracost [config files](https://www.infracost.io/docs/features/config_file/). Multi project support is available using Infracost native auto-detection.
   This means that the first time running in a multi-project workspace might be quite slow. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/7) to receive updates on config file support.
 
 ### Locating Infracost error logs
@@ -124,4 +125,4 @@ We love any contribution, big or small. If you want to change the Infracost VSCo
 5. Inside the editor, press F5. VSCode will compile and run the extension in a new Development Host window.
 6. Open a Terraform project, and navigate to a valid file. If all the previous steps have been followed correctly, you should see Infracost cost estimates above supported resource blocks.
 
-Once you're finished with your work, open a PR, and we'll be happy to review it as soon as possible. 
+Once you're finished with your work, open a PR, and we'll be happy to review it as soon as possible.
