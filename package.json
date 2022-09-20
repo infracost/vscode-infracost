@@ -101,7 +101,7 @@
 		"eslint-plugin-prettier": "^4.2.1",
 		"file-loader": "^6.2.0",
 		"glob": "^8.0.1",
-		"mocha": "^9.2.2",
+		"mocha": "^10.0.0",
 		"prettier": "^2.7.1",
 		"ts-loader": "^9.2.8",
 		"typescript": "^4.6.4",
