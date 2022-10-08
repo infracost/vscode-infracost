@@ -112,6 +112,6 @@
 	"dependencies": {
 		"@types/semver": "^7.3.12",
 		"handlebars": "^4.7.7",
-		"semver": "^7.3.7"
+		"semver": "^7.3.8"
 	}
 }
