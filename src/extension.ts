@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { readFile } from 'fs/promises';
 import { create, TemplateDelegate } from 'handlebars';
 import * as os from 'os';
@@ -459,15 +459,20 @@ class Workspace {
   async run(projectPath: string, init = false): Promise<infracostJSON.RootObject | undefined> {
     debugLog.appendLine(`debug: running Infracost in project: ${projectPath}`);
     try {
-      let cmd = `INFRACOST_CLI_PLATFORM=vscode infracost breakdown --path "${projectPath}" --format json --log-level info`;
+      debugLog.appendLine(`debug: running Infracost breakdown`);
 
-      if (os.platform() === 'win32') {
-        cmd = `cmd /C "set INFRACOST_CLI_PLATFORM=vscode && infracost breakdown --path "${projectPath}" --format json --log-level info"`;
-      }
-
-      debugLog.appendLine(`debug: running Infracost cmd ${cmd}`);
-
-      const { stdout } = await util.promisify(exec)(cmd);
+      const { stdout } = await util.promisify(execFile)("infracost", [
+        "breakdown",
+        "--path", projectPath,
+        "--format", "json",
+        "--log-level", "info",
+      ],
+      {
+        env: {
+          ...process.env,
+          "INFRACOST_CLI_PLATFORM": "vscode"
+        }
+      });
       const body = <infracostJSON.RootObject>JSON.parse(stdout);
 
       for (const project of body.projects) {
