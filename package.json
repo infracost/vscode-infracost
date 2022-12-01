@@ -94,7 +94,7 @@
 		"@typescript-eslint/eslint-plugin": "^5.30.5",
 		"@typescript-eslint/parser": "^5.30.5",
 		"@vscode/test-electron": "^2.1.3",
-		"eslint": "^8.14.0",
+		"eslint": "^8.28.0",
 		"eslint-config-airbnb-base": "^15.0.0",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-plugin-import": "^2.26.0",
