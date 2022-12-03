@@ -33,30 +33,27 @@ See a tree overview of your Infrastructure costs. See which projects, files and 
 
 ## Get started
 
-### 1. Install Infracost CLI
-
-Follow [this step](https://www.infracost.io/docs/#1-install-infracost) to install the Infracost CLI, which is used by this VSCode extension.
-
-### 2. Get an API key
-
-Follow [this step](https://www.infracost.io/docs/#2-get-api-key) to get a free API key that's used by the CLI to get prices from our Cloud Pricing API, e.g. get prices for instance types.
-
-- No cloud credentials or secrets are [sent](https://www.infracost.io/docs/faq/#what-data-is-sent-to-the-cloud-pricing-api) to the API and you can also [self-host](https://www.infracost.io/docs/cloud_pricing_api/self_hosted/) it.
-- Infracost does not make any changes to your Terraform state or cloud resources.
-
-### 3. Install VSCode extension
+### 1. Install VSCode extension
 
 Open VSCode and install the [Infracost extension](https://marketplace.visualstudio.com/items?itemName=Infracost.infracost).
 
 This will also install the the [Hashicorp Terraform extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) extension if you don't already have it.
    ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/infracost-install.png?raw=true)
 
-### 4. Use extension
+### 2. Connect VSCode to Infracost
+
+Once you've installed the extension, you'll need to connect to your editor to your Infracost account. Click the "connect to Infracost" button in the Infracost sidebar.
+
+ ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/connect-to-cloud.png?raw=true)
+
+This will open a browser window where you'll be able to log in to Infracost Cloud and authenticate your editor. 
+
+### 3. Use extension
 
 Navigate to any Terraform file, if you've done the prior steps correctly you'll see costs above [supported blocks](https://www.infracost.io/docs/supported_resources/overview/).
    ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/maintf.png?raw=true)
 
-### 5. Cost estimates in pull requests
+### 4. Cost estimates in pull requests
 
 [Use our CI/CD integrations](https://www.infracost.io/docs/integrations/cicd/) to add cost estimates to pull requests. This provides your team with a safety net as people can understand cloud costs upfront, and discuss them as part of your workflow.
 
@@ -67,7 +64,6 @@ Navigate to any Terraform file, if you've done the prior steps correctly you'll 
 The Infracost VSCode extension requires you to have:
 
 * VSCode **v1.67.0** or above.
-* Infracost CLI version **v0.10.6** or above [installed](https://www.infracost.io/docs) and registered with a valid API key.
 * The [Terraform VSCode extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) installed and enabled in VSCode.
 
 ## FAQs
