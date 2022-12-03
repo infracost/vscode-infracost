@@ -1,9 +1,11 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
+#  push:
+#    tags:
+#      - "v*"
+  pull_request:
+    branches: [ master ]
 
 permissions:
   contents: write
@@ -42,8 +44,8 @@ jobs:
           node-version: "16.13.1"
       - name: Setup Environment
         run: node -e "console.log('PACKAGE_VERSION=' + require('./package.json').version + '\nPACKAGE_NAME=' + require('./package.json').name + '-' + require('./package.json').version)" >> $GITHUB_ENV
-      - name: Verify versions
-        run: node -e "if ('refs/tags/v' + '${{ env.PACKAGE_VERSION }}' !== '${{ github.ref }}') { console.log('::error' + 'Version Mismatch. refs/tags/v' + '${{ env.PACKAGE_VERSION }}', '${{ github.ref }}'); throw Error('Version Mismatch')} "
+#      - name: Verify versions
+#        run: node -e "if ('refs/tags/v' + '${{ env.PACKAGE_VERSION }}' !== '${{ github.ref }}') { console.log('::error' + 'Version Mismatch. refs/tags/v' + '${{ env.PACKAGE_VERSION }}', '${{ github.ref }}'); throw Error('Version Mismatch')} "
       - name: Install
         run: yarn
         env:
@@ -58,22 +60,22 @@ jobs:
           name: ${{ matrix.vsce_target }}
           path: "*.vsix"
 
-  publish:
-    name: Publish All
-    runs-on: ubuntu-latest
-    needs: build
-    if: success() && startsWith( github.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/download-artifact@v3
-      - name: Publish Extension
-        run: yarn vsce publish --yarn --packagePath $(find . -iname *.vsix) -p ${{ secrets.MARKETPLACE_PAT }}
-      - name: Create GitHub release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ./${{ env.PACKAGE_NAME }}.vsix
-          tag_name: ${{ github.ref }}
-          name: v${{ env.PACKAGE_VERSION }}
-          draft: true
-          generate_release_notes: true
-          prerelease: false
+#  publish:
+#    name: Publish All
+#    runs-on: ubuntu-latest
+#    needs: build
+#    if: success() && startsWith( github.ref, 'refs/tags/v')
+#    steps:
+#      - uses: actions/download-artifact@v3
+#      - name: Publish Extension
+#        run: yarn vsce publish --yarn --packagePath $(find . -iname *.vsix) -p ${{ secrets.MARKETPLACE_PAT }}
+#      - name: Create GitHub release
+#        id: create_release
+#        uses: softprops/action-gh-release@v1
+#        with:
+#          files: ./${{ env.PACKAGE_NAME }}.vsix
+#          tag_name: ${{ github.ref }}
+#          name: v${{ env.PACKAGE_VERSION }}
+#          draft: true
+#          generate_release_notes: true
+#          prerelease: false
