@@ -8,7 +8,7 @@ import Block from './block';
 import infracostStatus from './statusBar';
 import {cleanFilename, isValidTerraformFile} from './utils';
 import webviews from './webview';
-import context, {LOGGED_IN} from './context';
+import context, {ERROR, LOGGED_IN} from './context';
 
 export default class Workspace {
   loading = false;
@@ -195,27 +195,20 @@ export default class Workspace {
         }
       }
 
+      await context.set(ERROR, undefined);
       return body;
     } catch (error) {
-      if (error instanceof Error) {
-        const msg = error.message ?? '';
-        if (msg.toLowerCase().includes('no infracost_api_key environment')) {
-          window.showErrorMessage(
-            'Please run `infracost auth login` in your terminal to get a free API. This is used by the Infracost CLI to retrieve prices from our Cloud Pricing API, e.g. get prices for instance types.'
-          );
-          return undefined;
-        }
-      }
-
       logger.error(`Infracost cmd error trace ${error}`);
 
       if (init) {
-        window.showErrorMessage(
-          `Could not run the infracost cmd in the ${projectPath} directory. This is likely because of a syntax error or invalid project. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`
+        await context.set(
+          ERROR,
+          `Could not run the infracost cmd in the \`${projectPath}\` directory. This is likely because of a syntax error or invalid project.\n\nSee the Infracost Debug output tab for more information. Go to **View > Output** & select "Infracost Debug" from the dropdown. If this problem continues please open an [issue here](https://github.com/infracost/vscode-infracost).`
         );
       } else {
-        window.showErrorMessage(
-          `Error fetching cloud costs with Infracost, please run again by saving the file or reopening the workspace. See the Infracost Debug output tab for more information. Go to View > Output & select "Infracost Debug" from the dropdown. If this problem continues please open an issue here: https://github.com/infracost/vscode-infracost.`
+        await context.set(
+          ERROR,
+          `Error fetching cloud costs with Infracost, please run again by saving the file or reopening the workspace.\n\nSee the Infracost Debug output tab for more information. Go to **View > Output** & select "Infracost Debug" from the dropdown. If this problem continues please open an [issue here](https://github.com/infracost/vscode-infracost).`
         );
       }
     }
