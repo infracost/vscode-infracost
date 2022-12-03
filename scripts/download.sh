@@ -21,7 +21,6 @@ fi
 
 bin_target=${INFRACOST_BIN_TARGET:-$os-$arch}
 
-
 url="https://infracost.io/downloads/latest"
 tar="infracost-$bin_target.tar.gz"
 echo "Downloading latest release of infracost-$bin_target..."
@@ -30,7 +29,7 @@ echo
 
 code=$(curl -s -L -o /dev/null -w "%{http_code}" "$url/$tar.sha256")
 if [ "$code" = "404" ]; then
-    echo "Skipping checksum validation as the sha for the release could not be found, no action needed."
+  echo "Skipping checksum validation as the sha for the release could not be found, no action needed."
 else
   echo "Validating checksum for infracost-$bin_target..."
   curl -sL "$url/$tar.sha256" -o "/tmp/$tar.sha256"
@@ -46,5 +45,11 @@ echo
 tar xzf "/tmp/$tar" -C /tmp
 rm "/tmp/$tar"
 
+rm -rf "bin"
 mkdir -p "bin"
-mv "/tmp/infracost-$bin_target" "bin/infracost"
+
+if echo "$bin_target" | grep "windows"; then
+  mv "/tmp/infracost.exe" "bin/infracost.exe"
+else
+  mv "/tmp/infracost-$bin_target" "bin/infracost"
+fi
