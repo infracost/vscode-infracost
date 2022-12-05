@@ -18,16 +18,16 @@ jobs:
             bin_target: windows-amd64
             npm_config_arch: x64
           - vsce_target: win32-arm64
-            ls_target: windows-arm64
+            bin_target: windows-arm64
             npm_config_arch: arm
           - vsce_target: linux-x64
-            ls_target: linux-amd64
+            bin_target: linux-amd64
             npm_config_arch: x64
           - vsce_target: linux-arm64
-            ls_target: linux-arm64
+            bin_target: linux-arm64
             npm_config_arch: arm64
           - vsce_target: darwin-x64
-            bing_target: darwin-amd64
+            bin_target: darwin-amd64
             npm_config_arch: x64
           - vsce_target: darwin-arm64
             bin_target: darwin-arm64
