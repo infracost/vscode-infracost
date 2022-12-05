@@ -48,7 +48,9 @@ rm "/tmp/$tar"
 rm -rf "bin"
 mkdir -p "bin"
 
-if echo "$bin_target" | grep "windows"; then
+if echo "$bin_target" | grep "windows-arm"; then
+  mv "/tmp/infracost-arm64.exe" "bin/infracost.exe"
+elif echo "$bin_target" | grep "windows"; then
   mv "/tmp/infracost.exe" "bin/infracost.exe"
 else
   mv "/tmp/infracost-$bin_target" "bin/infracost"
