@@ -43,23 +43,34 @@
     "views": {
       "infracost-projects": [
         {
+          "id": "infracostActivate",
+          "name": "Activate",
+          "when": "!infracost:active"
+        },
+        {
           "id": "infracostAuth",
           "name": "Authenticate",
-          "when": "!infracost:loggedIn"
+          "when": "infracost:active && !infracost:loggedIn"
         },
         {
           "id": "infracostProjects",
           "name": "Projects overview",
           "icon": "media/infracost.svg",
           "contextualTitle": "Infracost Projects",
-          "when": "infracost:loggedIn"
+          "when": "infracost:active && infracost:loggedIn"
         }
       ]
     },
     "viewsWelcome": [
       {
         "view": "infracostAuth",
-        "contents": "Welcome to Infracost for Visual Studio Code.🚀🚀🚀 \nLet's start by connecting VSCode with your Infracost Cloud account:\n[Connect VSCode to Infracost](command:infracost.login 'Connect with Infracost')"
+        "contents": "Welcome to Infracost for Visual Studio Code.🚀🚀🚀 \nLet's start by connecting VSCode with your Infracost Cloud account:\n[Connect VSCode to Infracost](command:infracost.login 'Connect with Infracost')",
+        "when": "infracost:active && !infracost:loggedIn"
+      },
+      {
+        "view": "infracostActivate",
+        "contents": "Open in a Terraform directory or workspace to activate Infracost for Visual Studio Code.",
+        "when": "!infracost:active"
       }
     ],
     "commands": [
