@@ -1,4 +1,11 @@
-import {ExtensionContext, StatusBarAlignment, StatusBarItem, window, ThemeColor, MarkdownString} from 'vscode';
+import {
+  ExtensionContext,
+  StatusBarAlignment,
+  StatusBarItem,
+  window,
+  ThemeColor,
+  MarkdownString,
+} from 'vscode';
 import context, { ERROR } from './context';
 
 class StatusBar {
@@ -15,7 +22,7 @@ class StatusBar {
   }
 
   setReady() {
-    const error = context.get(ERROR)
+    const error = context.get(ERROR);
     if (error) {
       this.setError(`${error}`);
       return;

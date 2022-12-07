@@ -1,14 +1,14 @@
 import * as path from 'path';
-import {TemplateDelegate} from 'handlebars';
-import {EventEmitter, TextDocument, TreeItem, window} from 'vscode';
-import CLI, {infracostJSON} from './cli';
+import { TemplateDelegate } from 'handlebars';
+import { EventEmitter, TextDocument, TreeItem, window } from 'vscode';
+import CLI, { infracostJSON } from './cli';
 import logger from './log';
 import Project from './project';
 import Block from './block';
 import infracostStatus from './statusBar';
-import {cleanFilename, isValidTerraformFile} from './utils';
+import { cleanFilename, isValidTerraformFile } from './utils';
 import webviews from './webview';
-import context, {ERROR, LOGGED_IN} from './context';
+import context, { ERROR, LOGGED_IN } from './context';
 
 export default class Workspace {
   loading = false;
@@ -26,8 +26,7 @@ export default class Workspace {
     private cli: CLI,
     private blockTemplate: TemplateDelegate,
     private treeRenderEventEmitter: EventEmitter<TreeItem | undefined | void>
-  ) {
-  }
+  ) {}
 
   async login() {
     logger.debug('executing infracost login');

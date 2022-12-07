@@ -4,12 +4,14 @@ import CLI from './cli';
 
 export const LOGGED_IN = 'loggedIn';
 export const ERROR = 'error';
+export const ACTIVE = 'active';
 
 class Context {
   private data: { [k: string]: unknown } = {};
 
   async init(cli: CLI) {
     this.data = {};
+    await this.set(ACTIVE, true);
 
     const buf = await cli.exec('configure', 'get', 'api_key');
     if (buf.stderr && buf.stderr.indexOf('No API key') === -1) {
