@@ -3,6 +3,7 @@ import logger from './log';
 import CLI from './cli';
 
 export const LOGGED_IN = 'loggedIn';
+export const ERROR = 'error';
 
 class Context {
   private data: { [k: string]: unknown } = {};
@@ -11,7 +12,7 @@ class Context {
     this.data = {};
 
     const buf = await cli.exec('configure', 'get', 'api_key');
-    if (buf.stderr.indexOf('No API key') === -1) {
+    if (buf.stderr && buf.stderr.indexOf('No API key') === -1) {
       await this.set(LOGGED_IN, true);
     }
   }
