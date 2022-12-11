@@ -1,0 +1,54 @@
+name: Build PR assets
+
+on:
+  pull_request:
+    branches: [ master ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build assets
+    strategy:
+      matrix:
+        include:
+          - vsce_target: win32-x64
+            bin_target: windows-amd64
+            npm_config_arch: x64
+          - vsce_target: win32-arm64
+            bin_target: windows-arm64
+            npm_config_arch: arm
+          - vsce_target: linux-x64
+            bin_target: linux-amd64
+            npm_config_arch: x64
+          - vsce_target: linux-arm64
+            bin_target: linux-arm64
+            npm_config_arch: arm64
+          - vsce_target: darwin-x64
+            bin_target: darwin-amd64
+            npm_config_arch: x64
+          - vsce_target: darwin-arm64
+            bin_target: darwin-arm64
+            npm_config_arch: arm64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16.13.1"
+      - name: Install
+        run: yarn
+        env:
+          npm_config_arch: ${{ matrix.npm_config_arch }}
+      - name: Package extension
+        run: yarn vscode:package -- --target=${{ matrix.vsce_target }}
+        env:
+          INFRACOST_BIN_TARGET: ${{ matrix.bin_target }}
+      - name: Upload vsix as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.vsce_target }}
+          path: "*.vsix"

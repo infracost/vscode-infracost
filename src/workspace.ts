@@ -31,15 +31,16 @@ export default class Workspace {
   async login() {
     logger.debug('executing infracost login');
 
-    const buf = await this.cli.exec('auth', 'login');
-    if (buf.stdout.indexOf('Your account has been authenticated') !== -1) {
+    const out = await this.cli.exec('auth', 'login');
+    if (out.stdout.indexOf('Your account has been authenticated') !== -1) {
+      window.showInformationMessage('VS Code is now connected to Infracost');
       logger.debug('successful login response received');
       await context.set(LOGGED_IN, true);
       await this.init();
       return;
     }
 
-    logger.debug(`failed login response was ${buf.stdout}`);
+    logger.debug(`failed login response was ${out.stdout}`);
     await context.set(LOGGED_IN, false);
   }
 
@@ -149,7 +150,7 @@ export default class Workspace {
     try {
       logger.debug(`running Infracost breakdown`);
 
-      const buf = await this.cli.exec(
+      const out = await this.cli.exec(
         'breakdown',
         '--path',
         projectPath,
@@ -159,7 +160,7 @@ export default class Workspace {
         'info'
       );
 
-      const body = <infracostJSON.RootObject>JSON.parse(buf.stdout.toString());
+      const body = <infracostJSON.RootObject>JSON.parse(out.stdout);
 
       for (const project of body.projects) {
         logger.debug(`found project ${project.name}`);
