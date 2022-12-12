@@ -1,4 +1,4 @@
-import { spawnSync, SpawnSyncReturns } from 'child_process';
+import { spawn } from 'child_process';
 
 export namespace infracostJSON {
   export interface Metadata {
@@ -89,17 +89,42 @@ export namespace infracostJSON {
   }
 }
 
+type CLIOutput = {
+  stderr: string;
+  stdout: string;
+};
+
 export default class CLI {
   constructor(private binaryPath: string) {}
 
-  async exec(...args: string[]): Promise<SpawnSyncReturns<Buffer>> {
-    return spawnSync(this.binaryPath, args, {
+  async exec(...args: string[]): Promise<CLIOutput> {
+    const cmd = spawn(this.binaryPath, args, {
       env: {
         ...process.env,
         INFRACOST_CLI_PLATFORM: 'vscode',
         INFRACOST_NO_COLOR: 'true',
         INFRACOST_SKIP_UPDATE_CHECK: 'true',
       },
+    });
+
+    return new Promise((resolve) => {
+      const stdOut: Uint8Array[] = [];
+      const stdErr: Uint8Array[] = [];
+
+      cmd.stdout.on('data', (data) => {
+        stdOut.push(data);
+      });
+
+      cmd.stderr.on('data', (data) => {
+        stdErr.push(data);
+      });
+
+      cmd.on('close', () => {
+        resolve({
+          stdout: Buffer.concat(stdOut).toString(),
+          stderr: Buffer.concat(stdErr).toString(),
+        });
+      });
     });
   }
 }
