@@ -89,7 +89,7 @@ export namespace infracostJSON {
   }
 }
 
-type CLIoutput = {
+type CLIOutput = {
   stderr: string;
   stdout: string;
 };
@@ -97,7 +97,7 @@ type CLIoutput = {
 export default class CLI {
   constructor(private binaryPath: string) {}
 
-  async exec(...args: string[]): Promise<CLIoutput> {
+  async exec(...args: string[]): Promise<CLIOutput> {
     const cmd = spawn(this.binaryPath, args, {
       env: {
         ...process.env,
