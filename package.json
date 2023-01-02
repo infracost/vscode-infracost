@@ -115,7 +115,7 @@
     "format:check": "prettier --check 'src/**/*.{js,ts}'"
   },
   "devDependencies": {
-    "@types/glob": "^7.2.0",
+    "@types/glob": "^8.0.0",
     "@types/mocha": "^10.0.1",
     "@types/node": "18.x",
     "@types/vscode": "^1.67.0",
