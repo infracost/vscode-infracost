@@ -115,7 +115,7 @@
     "format:check": "prettier --check 'src/**/*.{js,ts}'"
   },
   "devDependencies": {
-    "@types/glob": "^8.0.0",
+    "@types/glob": "^8.0.1",
     "@types/mocha": "^10.0.1",
     "@types/node": "18.x",
     "@types/vscode": "^1.67.0",
@@ -129,7 +129,7 @@
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-prettier": "^4.2.1",
     "file-loader": "^6.2.0",
-    "glob": "^8.0.1",
+    "glob": "^8.1.0",
     "mocha": "^10.2.0",
     "prettier": "^2.7.1",
     "ts-loader": "^9.4.2",
