@@ -75,7 +75,14 @@ Alternatively, you can use several files with the suffix `*.auto.tfvars`, e.g. `
 
 ### How can I configure the currency Infracost uses?
 
-To set the currency, run `infracost configure set currency EUR` (or any other ISO 4217 currency code). [This FAQ](https://www.infracost.io/docs/faq/#can-i-show-costs-in-a-different-currency) has more details.
+If you have the `infracost` CLI installed, you can set the currency by running `infracost configure set currency EUR`. Otherwise, update the global infracost configuration file (found at `~/.config/infracost/configuration.yml`) with the following: 
+
+```yaml
+version: "0.1"
+currency: EUR
+```
+
+Infracost supports all ISO 4217 currency codes. [This FAQ](https://www.infracost.io/docs/faq/#can-i-show-costs-in-a-different-currency) has more details.
 
 ## Troubleshooting
 
