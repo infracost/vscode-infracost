@@ -75,7 +75,7 @@ Alternatively, you can use several files with the suffix `*.auto.tfvars`, e.g. `
 
 ### How can I configure the currency Infracost uses?
 
-If you have the `infracost` CLI installed, you can set the currency by running `infracost configure set currency EUR`. Otherwise, update the global infracost configuration file (found at `~/.config/infracost/configuration.yml`) with the following: 
+If you have the `infracost` CLI installed, you can set the currency by running `infracost configure set currency EUR` (check `infracost configure --help` for other configuration options). Otherwise, update the global infracost configuration file (found at `~/.config/infracost/configuration.yml`) with the following:
 
 ```yaml
 version: "0.1"
