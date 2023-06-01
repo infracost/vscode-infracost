@@ -139,8 +139,8 @@
     "webpack-cli": "^5.0.2"
   },
   "dependencies": {
-    "@types/semver": "^7.3.12",
+    "@types/semver": "^7.5.0",
     "handlebars": "^4.7.7",
-    "semver": "^7.3.8"
+    "semver": "^7.5.1"
   }
 }
