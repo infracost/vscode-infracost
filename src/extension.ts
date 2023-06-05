@@ -26,7 +26,14 @@ export async function activate(ctx: ExtensionContext) {
   const root = folders[0].uri.fsPath.toString();
 
   const treeEmitter = new EventEmitter<InfracostTreeItem | undefined | void>();
-  const w = new Workspace(root, cli, template, treeEmitter);
+
+  const out = await cli.exec(['configure', 'get', 'currency']);
+  let currency = out.stdout.trim();
+  if (currency === '') {
+    currency = 'USD';
+  }
+
+  const w = new Workspace(root, cli, template, treeEmitter, currency);
 
   const projectProvider = new InfracostProjectProvider(w, treeEmitter);
   commands.registerCommand('infracost.refresh', () => projectProvider.refresh());

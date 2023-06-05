@@ -2,7 +2,7 @@
   "name": "infracost",
   "displayName": "Infracost",
   "description": "Cloud cost estimates for Terraform in your editor",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "publisher": "Infracost",
   "license": "Apache-2.0",
   "icon": "infracost-logo.png",
@@ -116,6 +116,7 @@
   },
   "devDependencies": {
     "@types/glob": "^8.0.1",
+    "@types/js-yaml": "^4.0.5",
     "@types/mocha": "^10.0.1",
     "@types/node": "18.x",
     "@types/vscode": "^1.67.0",
@@ -141,6 +142,7 @@
   "dependencies": {
     "@types/semver": "^7.3.12",
     "handlebars": "^4.7.7",
+    "js-yaml": "^4.1.0",
     "semver": "^7.3.8"
   }
 }

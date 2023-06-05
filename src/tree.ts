@@ -121,17 +121,17 @@ export default class InfracostProjectProvider implements TreeDataProvider<Infrac
     }
 
     return Promise.resolve(
-      Object.values(this.workspace.projects).map((p: Project): InfracostTreeItem => {
-        const local = path.relative(this.workspace?.root ?? '', p.name);
-        return new InfracostTreeItem(
-          p.name,
-          local,
-          p.cost(),
-          TreeItemCollapsibleState.Collapsed,
-          'project',
-          'cloud.svg'
-        );
-      })
+      Object.values(this.workspace.projects).map(
+        (p: Project): InfracostTreeItem =>
+          new InfracostTreeItem(
+            p.path,
+            p.name,
+            p.cost(),
+            TreeItemCollapsibleState.Collapsed,
+            'project',
+            'cloud.svg'
+          )
+      )
     );
   }
 }
