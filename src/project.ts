@@ -7,7 +7,12 @@ export default class Project {
 
   blocks: { [key: string]: Block } = {};
 
-  constructor(public name: string, public currency: string, public template: TemplateDelegate) {}
+  constructor(
+    public name: string,
+    public path: string,
+    public currency: string,
+    public template: TemplateDelegate
+  ) {}
 
   setBlock(filename: string, name: string): Block {
     if (this.files[filename] === undefined) {

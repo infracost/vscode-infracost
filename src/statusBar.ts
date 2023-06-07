@@ -16,6 +16,7 @@ class StatusBar {
   }
 
   setLoading() {
+    this.item.backgroundColor = undefined;
     this.item.text = '$(sync~spin) Infracost';
     this.item.tooltip = undefined;
     this.item.show();

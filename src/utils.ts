@@ -1,6 +1,10 @@
 import { commands, SymbolInformation, TextDocument } from 'vscode';
 import logger from './log';
 
+export const CONFIG_FILE_NAME = 'infracost.yml';
+export const CONFIG_TEMPLATE_NAME = 'infracost.yml.tmpl';
+export const USAGE_FILE_NAME = 'infracost-usage.yml';
+
 export function cleanFilename(filename: string): string {
   const replaceC = /^\/C/g;
   let cleaned = filename.replace(replaceC, '/c');

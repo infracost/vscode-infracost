@@ -13,7 +13,7 @@ class Context {
     this.data = {};
     await this.set(ACTIVE, true);
 
-    const out = await cli.exec('configure', 'get', 'api_key');
+    const out = await cli.exec(['configure', 'get', 'api_key']);
     if (out.stderr.indexOf('No API key') === -1) {
       await this.set(LOGGED_IN, true);
     }

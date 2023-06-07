@@ -97,8 +97,9 @@ type CLIOutput = {
 export default class CLI {
   constructor(private binaryPath: string) {}
 
-  async exec(...args: string[]): Promise<CLIOutput> {
+  async exec(args: string[], cwd?: string): Promise<CLIOutput> {
     const cmd = spawn(this.binaryPath, args, {
+      cwd,
       env: {
         ...process.env,
         INFRACOST_CLI_PLATFORM: 'vscode',
