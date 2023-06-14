@@ -46,7 +46,7 @@ Once you've installed the extension, you'll need to connect to your editor to yo
 
  ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/connect-to-cloud.png?raw=true)
 
-This will open a browser window where you'll be able to log in to Infracost Cloud and authenticate your editor. 
+This will open a browser window where you'll be able to log in to Infracost Cloud and authenticate your editor. See the [#troubleshooting](Troubleshooting) section if this does not work.
 
 ### 3. Use extension
 
@@ -154,6 +154,11 @@ Infracost supports all ISO 4217 currency codes. [This FAQ](https://www.infracost
   ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/loading.png?raw=true)  
 * Terragrunt is not supported. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/4) for more information for future updates about Terragrunt support.
 * [Diff functionality](https://www.infracost.io/docs/features/cli_commands/#diff) is not yet supported. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/8) to receive updates on diff support.
+* If the "Connect VSCode to Infracost" button does not work:
+  1. Register for a free API key from [here](https://dashboard.infracost.io/). This is used by the extension to retrieve prices from our Cloud Pricing API, e.g. get prices for instance types.
+  2. [Install](https://www.infracost.io/docs/#1-install-infracost) the `infracost` CLI.
+  3. Run `infracost configure set api_key MY_API_KEY_HERE`.
+  4. Re-open the VSCode extension, it should now skip the "connect to Infracost" step as it uses the same API key from the CLI.
 
 ### Locating Infracost error logs
 
