@@ -46,7 +46,7 @@ Once you've installed the extension, you'll need to connect to your editor to yo
 
  ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/connect-to-cloud.png?raw=true)
 
-This will open a browser window where you'll be able to log in to Infracost Cloud and authenticate your editor. See the [#troubleshooting](Troubleshooting) section if this does not work.
+This will open a browser window where you'll be able to log in to Infracost Cloud and authenticate your editor. See the [Troubleshooting](#troubleshooting) section if this does not work.
 
 ### 3. Use extension
 
