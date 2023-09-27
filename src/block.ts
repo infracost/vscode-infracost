@@ -31,7 +31,7 @@ export default class Block {
     let cost = 0;
 
     for (const r of this.resources) {
-      if (r.monthlyCost === null) {
+      if (r.monthlyCost == null) {
         r.monthlyCost = 0;
       }
 
