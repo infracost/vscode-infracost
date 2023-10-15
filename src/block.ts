@@ -1,4 +1,4 @@
-import { ViewColumn, WebviewPanel, window } from 'vscode';
+import { Position, Range, ViewColumn, WebviewPanel, window } from 'vscode';
 import { TemplateDelegate } from 'handlebars';
 import { infracostJSON } from './cli';
 import webviews from './webview';
@@ -8,8 +8,11 @@ export default class Block {
 
   webview: WebviewPanel | undefined;
 
+  lensPosition: Range;
+
   constructor(
     public name: string,
+    public startLine: number,
     public filename: string,
     public currency: string,
     public template: TemplateDelegate
@@ -21,6 +24,9 @@ export default class Block {
         this.webview = undefined;
       });
     }
+
+    const position = new Position(this.startLine - 1, 0);
+    this.lensPosition = new Range(position, position);
   }
 
   key(): string {

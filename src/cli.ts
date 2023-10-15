@@ -16,12 +16,14 @@ export namespace infracostJSON {
 
   export interface ResourceMetadata {
     filename: string;
+    startLine: number;
     calls: Call[];
   }
 
   export interface Call {
     blockName: string;
     filename: string;
+    startLine: number;
   }
 
   export interface CostComponent {

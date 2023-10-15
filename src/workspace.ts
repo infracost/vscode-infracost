@@ -305,7 +305,7 @@ export default class Workspace {
           const filename = cleanFilename(call.filename);
           logger.debug(`adding file: ${filename} to project: ${projectPath}`);
 
-          formatted.setBlock(filename, call.blockName).resources.push(resource);
+          formatted.setBlock(filename, call.blockName, call.startLine).resources.push(resource);
           this.addProjectToFile(filename, projectPath);
         }
       }
