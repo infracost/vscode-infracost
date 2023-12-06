@@ -2,7 +2,7 @@
   "name": "infracost",
   "displayName": "Infracost",
   "description": "Cloud cost estimates for Terraform in your editor",
-  "version": "0.2.19",
+  "version": "0.2.20",
   "publisher": "Infracost",
   "license": "Apache-2.0",
   "icon": "infracost-logo.png",
