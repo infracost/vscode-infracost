@@ -2,7 +2,7 @@
   "name": "infracost",
   "displayName": "Infracost",
   "description": "Cloud cost estimates for Terraform in your editor",
-  "version": "0.2.22",
+  "version": "0.2.23",
   "publisher": "Infracost",
   "license": "Apache-2.0",
   "icon": "infracost-logo.png",
@@ -19,9 +19,7 @@
     "terraform",
     "hcl"
   ],
-  "extensionDependencies": [
-    "HashiCorp.terraform"
-  ],
+  "extensionDependencies": [],
   "repository": {
     "type": "git",
     "url": "https://github.com/infracost/vscode-infracost.git"

@@ -37,9 +37,6 @@ See a tree overview of your Infrastructure costs. See which projects, files and 
 
 Open VS Code and install the [Infracost extension](https://marketplace.visualstudio.com/items?itemName=Infracost.infracost).
 
-This will also install the the [Hashicorp Terraform extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) extension if you don't already have it.
-   ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/infracost-install.png?raw=true)
-
 ### 2. Connect VS Code to Infracost
 
 Once you've installed the extension, you'll need to connect to your editor to your Infracost account. Click the "connect to Infracost" button in the Infracost sidebar.
@@ -179,8 +176,7 @@ We love any contribution, big or small. If you want to change the Infracost VS C
 1. Clone the repo.
 2. `yarn` install all the dependencies.
 3. Open the repo in VS Code.
-4. Install the [Terraform VS Code extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) in VS Code.
-5. Inside the editor, press F5. VS Code will compile and run the extension in a new Development Host window.
-6. Open a Terraform project, and navigate to a valid file. If all the previous steps have been followed correctly, you should see Infracost cost estimates above supported resource blocks.
+4. Inside the editor, press F5. VS Code will compile and run the extension in a new Development Host window.
+5. Open a Terraform project, and navigate to a valid file. If all the previous steps have been followed correctly, you should see Infracost cost estimates above supported resource blocks.
 
 Once you're finished with your work, open a PR, and we'll be happy to review it as soon as possible. 

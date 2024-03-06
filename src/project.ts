@@ -14,13 +14,13 @@ export default class Project {
     public template: TemplateDelegate
   ) {}
 
-  setBlock(filename: string, name: string): Block {
+  setBlock(filename: string, name: string, startLine: number): Block {
     if (this.files[filename] === undefined) {
       this.files[filename] = new File(filename, this.currency, this.template);
     }
 
     const file = this.files[filename];
-    const block = file.setBlock(name);
+    const block = file.setBlock(name, startLine);
 
     if (this.blocks[name] === undefined) {
       this.blocks[name] = block;

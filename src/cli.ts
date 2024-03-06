@@ -16,12 +16,14 @@ export namespace infracostJSON {
 
   export interface ResourceMetadata {
     filename: string;
+    startLine: number;
     calls: Call[];
   }
 
   export interface Call {
     blockName: string;
     filename: string;
+    startLine: number;
   }
 
   export interface CostComponent {
@@ -105,6 +107,7 @@ export default class CLI {
         INFRACOST_CLI_PLATFORM: 'vscode',
         INFRACOST_NO_COLOR: 'true',
         INFRACOST_SKIP_UPDATE_CHECK: 'true',
+        INFRACOST_GRAPH_EVALUATOR: 'true'
       },
     });
 

@@ -24,9 +24,9 @@ export default class File {
     return formatter.format(cost);
   }
 
-  setBlock(name: string): Block {
+  setBlock(name: string, startLine: number): Block {
     if (this.blocks[name] === undefined) {
-      this.blocks[name] = new Block(name, this.name, this.currency, this.template);
+      this.blocks[name] = new Block(name, startLine, this.name, this.currency, this.template);
     }
 
     return this.blocks[name];
