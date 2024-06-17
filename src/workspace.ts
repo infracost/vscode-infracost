@@ -302,7 +302,7 @@ export default class Workspace {
       const formatted = new Project(name, projectPath, this.currency, this.blockTemplate);
       for (const resource of project.breakdown.resources) {
         for (const call of resource.metadata.calls) {
-          const filename = cleanFilename(call.filename);
+          const filename = path.resolve(cleanFilename(call.filename));
           logger.debug(`adding file: ${filename} to project: ${projectPath}`);
 
           formatted.setBlock(filename, call.blockName, call.startLine).resources.push(resource);
