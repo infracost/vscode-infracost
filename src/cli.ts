@@ -107,7 +107,7 @@ export default class CLI {
         INFRACOST_CLI_PLATFORM: 'vscode',
         INFRACOST_NO_COLOR: 'true',
         INFRACOST_SKIP_UPDATE_CHECK: 'true',
-        INFRACOST_GRAPH_EVALUATOR: 'true'
+        INFRACOST_GRAPH_EVALUATOR: 'true',
       },
     });
 
