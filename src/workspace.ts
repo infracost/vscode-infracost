@@ -115,7 +115,14 @@ export default class Workspace {
 
     logger.debug(`detected file change for path ${filename}`);
 
-    const projects = this.filesToProjects[filename];
+   const key = filename.split(path.sep).join('/');
+    const projects =
+      this.filesToProjects[
+        Object.keys(this.filesToProjects).find(
+          (k: string) => k.toLowerCase() === key.toLowerCase()
+        ) || key
+      ];
+
     if (projects === undefined) {
       logger.debug(
         `no valid projects found for path ${filename} attempting to locate project for file`
@@ -155,10 +162,16 @@ export default class Workspace {
 
   // TODO: determine or allow users to switch the project they are using.
   project(filename: string): { [key: string]: Block } {
-    const projects = this.filesToProjects[filename];
+    const key = filename.split(path.sep).join('/');
+    const projectKey =
+      this.filesToProjects[
+        Object.keys(this.filesToProjects).find(
+          (k: string) => k.toLowerCase() === key.toLowerCase()
+        ) || key
+      ];
 
-    if (projects && Object.keys(projects).length > 0) {
-      const project = Object.keys(projects)[0];
+    if (projectKey && Object.keys(projectKey).length > 0) {
+      const project = Object.keys(projectKey)[0];
       return this.projects[project].blocks;
     }
 
@@ -302,7 +315,7 @@ export default class Workspace {
       const formatted = new Project(name, projectPath, this.currency, this.blockTemplate);
       for (const resource of project.breakdown.resources) {
         for (const call of resource.metadata.calls) {
-          const filename = path.resolve(cleanFilename(call.filename));
+          const filename = cleanFilename(path.resolve(call.filename));
           logger.debug(`adding file: ${filename} to project: ${projectPath}`);
 
           formatted.setBlock(filename, call.blockName, call.startLine).resources.push(resource);
@@ -327,10 +340,11 @@ export default class Workspace {
   }
 
   private addProjectToFile(filename: string, projectPath: string) {
-    if (this.filesToProjects[filename] === undefined) {
-      this.filesToProjects[filename] = {};
+    const key = filename.split(path.sep).join('/');
+    if (this.filesToProjects[key] === undefined) {
+      this.filesToProjects[key] = {};
     }
 
-    this.filesToProjects[filename][projectPath] = true;
+    this.filesToProjects[key][projectPath] = true;
   }
 }
