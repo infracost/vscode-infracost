@@ -1,4 +1,6 @@
 import { commands, SymbolInformation, TextDocument } from 'vscode';
+import { Buffer } from 'buffer';
+import * as fs from 'fs';
 import logger from './log';
 
 export const CONFIG_FILE_NAME = 'infracost.yml';
@@ -36,4 +38,17 @@ export async function isValidTerraformFile(file: TextDocument): Promise<boolean>
   }
 
   return true;
+}
+
+export async function getFileEncoding(filepath: string): Promise<string> {
+  const d = Buffer.alloc(5, 0);
+  const fd = fs.openSync(filepath, 'r');
+  fs.readSync(fd, d, 0, 5, 0);
+  fs.closeSync(fd);
+
+  if (d[0] === 0xef && d[1] === 0xbb && d[2] === 0xbf) return 'utf8';
+  if (d[0] === 0xfe && d[1] === 0xff) return 'utf16be';
+  if (d[0] === 0xff && d[1] === 0xfe) return 'utf16le';
+
+  return 'utf8';
 }

@@ -6,4 +6,5 @@ export type ConfigFile = {
 export type ConfigProject = {
   path: string;
   name: string;
+  skip_autodetect: boolean;
 };

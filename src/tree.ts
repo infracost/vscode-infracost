@@ -101,9 +101,12 @@ export default class InfracostProjectProvider implements TreeDataProvider<Infrac
           .sort((a: File, b: File): number => b.rawCost() - a.rawCost())
           .reduce((arr: InfracostTreeItem[], f: File): InfracostTreeItem[] => {
             const name = path.basename(f.name);
-            const filePath = path.relative(element.key, f.name);
+            const filePath =
+              process.platform === 'win32'
+                ? path.resolve(element.key, name)
+                : path.resolve(element.key, f.name);
 
-            if (filePath === name) {
+            if (filePath === f.name) {
               const item = new InfracostTreeItem(
                 `${element.key}|${f.name}`,
                 name,
