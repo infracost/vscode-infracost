@@ -12,6 +12,7 @@ import {
   cleanFilename,
   CONFIG_FILE_NAME,
   CONFIG_TEMPLATE_NAME,
+  getFileEncoding,
   isValidTerraformFile,
   USAGE_FILE_NAME,
 } from './utils';
@@ -115,7 +116,7 @@ export default class Workspace {
 
     logger.debug(`detected file change for path ${filename}`);
 
-   const key = filename.split(path.sep).join('/');
+    const key = filename.split(path.sep).join('/');
     const projects =
       this.filesToProjects[
         Object.keys(this.filesToProjects).find(
@@ -211,7 +212,7 @@ export default class Workspace {
         projects = await this.runBreakdown(changedProjectPaths);
       }
 
-      await this.renderProjectTree(projects, changedProjectPaths.length > 0, hasConfigFile);
+      await this.renderProjectTree(projects, changedProjectPaths.length === 0, hasConfigFile);
       return projects;
     } catch (error) {
       logger.error(`Infracost cmd error trace ${error}`);
@@ -249,14 +250,15 @@ export default class Workspace {
         {}
       );
       logger.debug('filtering config file projects to only those that have changed');
-
-      const doc = <ConfigFile>load(readFileSync(configFilePath, 'utf8'));
+      const encoding = await getFileEncoding(configFilePath);
+      const doc = <ConfigFile>load(readFileSync(configFilePath, encoding as BufferEncoding));
       doc.projects = doc.projects.filter((p) => changed[p.path]);
 
       const str = dump(doc);
       const tmpConfig = path.join(tmpdir(), CONFIG_FILE_NAME);
       writeFileSync(tmpConfig, str);
-      args = ['--config-file', configFilePath];
+      logger.debug(`created temporary config file ${tmpConfig}`);
+      args = ['--config-file', tmpConfig];
       logger.debug(`running "infracost breakdown --config-file" with changed projects`);
     }
 
@@ -297,6 +299,13 @@ export default class Workspace {
     return projects;
   }
 
+  private determineResolvedFilename(projectPath: string, filename: string): string {
+    if (process.platform === 'win32') {
+      return path.resolve(projectPath, path.basename(filename));
+    }
+    return [this.root, path.resolve(path.relative(this.root, filename))].join('');
+  }
+
   private async renderProjectTree(
     projects: infracostJSON.Project[],
     init: boolean,
@@ -314,12 +323,13 @@ export default class Workspace {
       const name = hasConfigFile ? project.name : path.relative(this.root, projectPath);
       const formatted = new Project(name, projectPath, this.currency, this.blockTemplate);
       for (const resource of project.breakdown.resources) {
-        for (const call of resource.metadata.calls) {
-          const filename = cleanFilename(path.resolve(call.filename));
-          logger.debug(`adding file: ${filename} to project: ${projectPath}`);
-
-          formatted.setBlock(filename, call.blockName, call.startLine).resources.push(resource);
-          this.addProjectToFile(filename, projectPath);
+        if (resource.metadata.calls) {
+          for (const call of resource.metadata.calls) {
+            const filename = this.determineResolvedFilename(projectPath, call.filename);
+            logger.debug(`adding file: ${filename} to project: ${projectPath}`);
+            formatted.setBlock(filename, call.blockName, call.startLine).resources.push(resource);
+            this.addProjectToFile(filename, projectPath);
+          }
         }
       }
 
