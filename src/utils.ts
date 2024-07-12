@@ -8,10 +8,10 @@ export const CONFIG_TEMPLATE_NAME = 'infracost.yml.tmpl';
 export const USAGE_FILE_NAME = 'infracost-usage.yml';
 
 export function cleanFilename(filename: string): string {
-  const replaceC = /^\/C/g;
-  let cleaned = filename.replace(replaceC, '/c');
+  const replaceDrive = /^\/[A-Z]:/g;
+  let cleaned = filename.replace(replaceDrive, (match) => match.toLowerCase());
 
-  if (cleaned.startsWith('c')) {
+  if (cleaned.match(/^[a-z]:/)) {
     const slash = /\\+/gi;
     cleaned = `/${cleaned.replace(slash, '/')}`;
   }
