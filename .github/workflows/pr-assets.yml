@@ -39,6 +39,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "16.13.1"
+      - name: Install libsecret-1-dev
+        run: sudo apt-get install libsecret-1-dev
       - name: Install
         run: yarn
         env:
