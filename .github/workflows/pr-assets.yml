@@ -50,7 +50,7 @@ jobs:
         env:
           INFRACOST_BIN_TARGET: ${{ matrix.bin_target }}
       - name: Upload vsix as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.vsce_target }}
           path: "*.vsix"
