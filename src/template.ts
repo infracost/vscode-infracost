@@ -58,7 +58,7 @@ export default async function compileTemplates(
         return title;
       }
 
-      return `${title} (${currency}`;
+      return `${title} (${currency})`;
     }
   );
 
