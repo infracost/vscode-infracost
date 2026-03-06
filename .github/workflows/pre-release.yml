@@ -1,0 +1,182 @@
+name: Pre-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Pre-release version (e.g. 0.3.0-rc.1)"
+        required: true
+        type: string
+      lspVersion:
+        description: "infracost-lsp version to bundle"
+        required: true
+        type: string
+      parserVersion:
+        description: "infracost-parser-plugin version (optional)"
+        required: false
+        type: string
+      awsProviderVersion:
+        description: "infracost-provider-plugin-aws version (optional)"
+        required: false
+        type: string
+      azureProviderVersion:
+        description: "infracost-provider-plugin-azurerm version (optional)"
+        required: false
+        type: string
+      gcpProviderVersion:
+        description: "infracost-provider-plugin-google version (optional)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.vsce_target }}
+    strategy:
+      matrix:
+        include:
+          - vsce_target: win32-x64
+            go_os: windows
+            go_arch: amd64
+            archive_ext: zip
+          - vsce_target: win32-arm64
+            go_os: windows
+            go_arch: arm64
+            archive_ext: zip
+          - vsce_target: linux-x64
+            go_os: linux
+            go_arch: amd64
+            archive_ext: tar.gz
+          - vsce_target: linux-arm64
+            go_os: linux
+            go_arch: arm64
+            archive_ext: tar.gz
+          - vsce_target: darwin-x64
+            go_os: darwin
+            go_arch: amd64
+            archive_ext: tar.gz
+          - vsce_target: darwin-arm64
+            go_os: darwin
+            go_arch: arm64
+            archive_ext: tar.gz
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create GitHub App token
+        uses: infracost/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.INFRACOST_CI_APP_ID }}
+          private-key: ${{ secrets.INFRACOST_CI_APP_PRIVATE_KEY }}
+          owner: infracost
+          repositories: "infracost-lsp,cli-poc"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn
+
+      - name: Download infracost-lsp
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          mkdir -p bin
+          LSP_VERSION="${{ inputs.lspVersion }}"
+          OS="${{ matrix.go_os }}"
+          ARCH="${{ matrix.go_arch }}"
+          EXT="${{ matrix.archive_ext }}"
+          ARCHIVE="infracost-lsp_${OS}_${ARCH}.${EXT}"
+
+          gh release download "v${LSP_VERSION}" \
+            --repo infracost/infracost-lsp \
+            --pattern "${ARCHIVE}" \
+            --dir /tmp
+
+          if [ "${EXT}" = "zip" ]; then
+            unzip -o "/tmp/${ARCHIVE}" -d /tmp/lsp-extract
+            mv /tmp/lsp-extract/infracost-lsp.exe bin/infracost-lsp.exe
+          else
+            tar xzf "/tmp/${ARCHIVE}" -C /tmp
+            mv /tmp/infracost-lsp bin/infracost-lsp
+            chmod +x bin/infracost-lsp
+          fi
+
+      - name: Download plugins
+        if: inputs.parserVersion != '' || inputs.awsProviderVersion != '' || inputs.azureProviderVersion != '' || inputs.gcpProviderVersion != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          OS="${{ matrix.go_os }}"
+          ARCH="${{ matrix.go_arch }}"
+          EXT="${{ matrix.archive_ext }}"
+
+          download_plugin() {
+            local name="$1"
+            local version="$2"
+            if [ -z "${version}" ]; then
+              return
+            fi
+
+            local tag="${name}%2Fv${version}"
+            local archive="${name}_${version}_${OS}_${ARCH}.${EXT}"
+
+            echo "Downloading ${name} v${version} for ${OS}/${ARCH}..."
+            gh release download "${tag}" \
+              --repo infracost/cli-poc \
+              --pattern "${archive}" \
+              --dir /tmp
+
+            if [ "${EXT}" = "zip" ]; then
+              unzip -o "/tmp/${archive}" -d /tmp/plugin-extract
+              mv "/tmp/plugin-extract/${name}.exe" "bin/${name}.exe"
+            else
+              tar xzf "/tmp/${archive}" -C /tmp
+              mv "/tmp/${name}" "bin/${name}"
+              chmod +x "bin/${name}"
+            fi
+          }
+
+          download_plugin "infracost-parser-plugin" "${{ inputs.parserVersion }}"
+          download_plugin "infracost-provider-plugin-aws" "${{ inputs.awsProviderVersion }}"
+          download_plugin "infracost-provider-plugin-azurerm" "${{ inputs.azureProviderVersion }}"
+          download_plugin "infracost-provider-plugin-google" "${{ inputs.gcpProviderVersion }}"
+
+      - name: List bin contents
+        run: ls -la bin/
+
+      - name: Package extension
+        run: yarn vscode:package -- --target=${{ matrix.vsce_target }} --pre-release
+
+      - name: Upload vsix as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.vsce_target }}
+          path: "*.vsix"
+
+  release:
+    name: Create Pre-release
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ inputs.version }}" \
+            --repo "${{ github.repository }}" \
+            --title "v${{ inputs.version }}" \
+            --prerelease \
+            --generate-notes \
+            artifacts/**/*.vsix
