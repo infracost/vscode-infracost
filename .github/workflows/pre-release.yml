@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       lspVersion:
-        description: "infracost-lsp version to bundle"
+        description: "lsp version to bundle"
         required: true
         type: string
       parserVersion:
@@ -37,14 +37,14 @@ jobs:
     strategy:
       matrix:
         include:
-          - vsce_target: win32-x64
-            go_os: windows
-            go_arch: amd64
-            archive_ext: zip
-          - vsce_target: win32-arm64
-            go_os: windows
-            go_arch: arm64
-            archive_ext: zip
+          # - vsce_target: win32-x64
+          #   go_os: windows
+          #   go_arch: amd64
+          #   archive_ext: zip
+          # - vsce_target: win32-arm64
+          #   go_os: windows
+          #   go_arch: arm64
+          #   archive_ext: zip
           - vsce_target: linux-x64
             go_os: linux
             go_arch: amd64
@@ -66,53 +66,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create GitHub App token
-        uses: infracost/create-github-app-token@v1
-        id: app-token
-        with:
-          app-id: ${{ secrets.INFRACOST_CI_APP_ID }}
-          private-key: ${{ secrets.INFRACOST_CI_APP_PRIVATE_KEY }}
-          owner: infracost
-          repositories: "infracost-lsp,cli-poc"
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: yarn
+          cache: npm
 
       - name: Install dependencies
-        run: yarn
+        run: npm ci
 
-      - name: Download infracost-lsp
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      - name: Download lsp
         run: |
           mkdir -p bin
           LSP_VERSION="${{ inputs.lspVersion }}"
           OS="${{ matrix.go_os }}"
           ARCH="${{ matrix.go_arch }}"
           EXT="${{ matrix.archive_ext }}"
-          ARCHIVE="infracost-lsp_${OS}_${ARCH}.${EXT}"
+          ARCHIVE="lsp_${OS}_${ARCH}.${EXT}"
 
           gh release download "v${LSP_VERSION}" \
-            --repo infracost/infracost-lsp \
+            --repo infracost/lsp \
             --pattern "${ARCHIVE}" \
             --dir /tmp
 
+          EXTRACT_DIR=$(mktemp -d)
           if [ "${EXT}" = "zip" ]; then
-            unzip -o "/tmp/${ARCHIVE}" -d /tmp/lsp-extract
-            mv /tmp/lsp-extract/infracost-lsp.exe bin/infracost-lsp.exe
+            unzip -o "/tmp/${ARCHIVE}" -d "${EXTRACT_DIR}"
           else
-            tar xzf "/tmp/${ARCHIVE}" -C /tmp
-            mv /tmp/infracost-lsp bin/infracost-lsp
-            chmod +x bin/infracost-lsp
+            tar xzf "/tmp/${ARCHIVE}" -C "${EXTRACT_DIR}"
           fi
+
+          SUFFIX=""
+          if [ "${OS}" = "windows" ]; then SUFFIX=".exe"; fi
+
+          find "${EXTRACT_DIR}" -name "infracost-ls${SUFFIX}" -type f -exec mv {} "bin/infracost-ls${SUFFIX}" \;
+          chmod +x "bin/infracost-ls${SUFFIX}"
+          rm -rf "${EXTRACT_DIR}"
 
       - name: Download plugins
         if: inputs.parserVersion != '' || inputs.awsProviderVersion != '' || inputs.azureProviderVersion != '' || inputs.gcpProviderVersion != ''
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           OS="${{ matrix.go_os }}"
           ARCH="${{ matrix.go_arch }}"
@@ -134,14 +126,19 @@ jobs:
               --pattern "${archive}" \
               --dir /tmp
 
+            local extract_dir
+            extract_dir=$(mktemp -d)
             if [ "${EXT}" = "zip" ]; then
-              unzip -o "/tmp/${archive}" -d /tmp/plugin-extract
-              mv "/tmp/plugin-extract/${name}.exe" "bin/${name}.exe"
+              unzip -o "/tmp/${archive}" -d "${extract_dir}"
             else
-              tar xzf "/tmp/${archive}" -C /tmp
-              mv "/tmp/${name}" "bin/${name}"
-              chmod +x "bin/${name}"
+              tar xzf "/tmp/${archive}" -C "${extract_dir}"
             fi
+
+            local suffix=""
+            if [ "${OS}" = "windows" ]; then suffix=".exe"; fi
+            find "${extract_dir}" -name "${name}${suffix}" -type f -exec mv {} "bin/${name}${suffix}" \;
+            chmod +x "bin/${name}${suffix}"
+            rm -rf "${extract_dir}"
           }
 
           download_plugin "infracost-parser-plugin" "${{ inputs.parserVersion }}"
@@ -152,8 +149,11 @@ jobs:
       - name: List bin contents
         run: ls -la bin/
 
+      - name: Set version
+        run: npm version "${{ inputs.version }}" --no-git-tag-version
+
       - name: Package extension
-        run: yarn vscode:package -- --target=${{ matrix.vsce_target }} --pre-release
+        run: npm run vscode:package -- --target=${{ matrix.vsce_target }} --pre-release
 
       - name: Upload vsix as artifact
         uses: actions/upload-artifact@v4
