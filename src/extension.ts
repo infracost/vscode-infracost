@@ -172,7 +172,7 @@ export function activate(context: ExtensionContext) {
 
   context.subscriptions.push(
     commands.registerCommand("infracost.restartLsp", async () => {
-      if (client) {
+      if (client && client.isRunning()) {
         await client.stop();
       }
       client = createClient();

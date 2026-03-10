@@ -7,11 +7,13 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "infracost.resourceDetails";
 
   private view?: vscode.WebviewView;
+  private pendingHtml?: string;
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
     webviewView.webview.options = { enableScripts: true };
-    this.view.webview.html = renderEmpty();
+    this.view.webview.html = this.pendingHtml ?? renderEmpty();
+    this.pendingHtml = undefined;
 
     webviewView.webview.onDidReceiveMessage((msg) => {
       if (msg.command === "login") {
@@ -21,16 +23,18 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
   }
 
   update(data: ResourceDetailsResult): void {
-    if (!this.view) {
-      return;
-    }
-    this.view.webview.html = renderResult(data);
+    this.setHtml(renderResult(data));
   }
 
   showLogin(): void {
-    if (!this.view) {
-      return;
+    this.setHtml(renderLogin());
+  }
+
+  private setHtml(html: string): void {
+    if (this.view) {
+      this.view.webview.html = html;
+    } else {
+      this.pendingHtml = html;
     }
-    this.view.webview.html = renderLogin();
   }
 }
