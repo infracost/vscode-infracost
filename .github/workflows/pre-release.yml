@@ -11,22 +11,6 @@ on:
         description: "lsp version to bundle"
         required: true
         type: string
-      parserVersion:
-        description: "infracost-parser-plugin version (optional)"
-        required: false
-        type: string
-      awsProviderVersion:
-        description: "infracost-provider-plugin-aws version (optional)"
-        required: false
-        type: string
-      azureProviderVersion:
-        description: "infracost-provider-plugin-azurerm version (optional)"
-        required: false
-        type: string
-      gcpProviderVersion:
-        description: "infracost-provider-plugin-google version (optional)"
-        required: false
-        type: string
 
 permissions:
   contents: write
@@ -76,6 +60,8 @@ jobs:
         run: npm ci
 
       - name: Download lsp
+        env:
+          GH_TOKEN: ${{ github.token }} 
         run: |
           mkdir -p bin
           LSP_VERSION="${{ inputs.lspVersion }}"
@@ -102,49 +88,6 @@ jobs:
           find "${EXTRACT_DIR}" -name "infracost-ls${SUFFIX}" -type f -exec mv {} "bin/infracost-ls${SUFFIX}" \;
           chmod +x "bin/infracost-ls${SUFFIX}"
           rm -rf "${EXTRACT_DIR}"
-
-      - name: Download plugins
-        if: inputs.parserVersion != '' || inputs.awsProviderVersion != '' || inputs.azureProviderVersion != '' || inputs.gcpProviderVersion != ''
-        run: |
-          OS="${{ matrix.go_os }}"
-          ARCH="${{ matrix.go_arch }}"
-          EXT="${{ matrix.archive_ext }}"
-
-          download_plugin() {
-            local name="$1"
-            local version="$2"
-            if [ -z "${version}" ]; then
-              return
-            fi
-
-            local tag="${name}%2Fv${version}"
-            local archive="${name}_${version}_${OS}_${ARCH}.${EXT}"
-
-            echo "Downloading ${name} v${version} for ${OS}/${ARCH}..."
-            gh release download "${tag}" \
-              --repo infracost/cli-poc \
-              --pattern "${archive}" \
-              --dir /tmp
-
-            local extract_dir
-            extract_dir=$(mktemp -d)
-            if [ "${EXT}" = "zip" ]; then
-              unzip -o "/tmp/${archive}" -d "${extract_dir}"
-            else
-              tar xzf "/tmp/${archive}" -C "${extract_dir}"
-            fi
-
-            local suffix=""
-            if [ "${OS}" = "windows" ]; then suffix=".exe"; fi
-            find "${extract_dir}" -name "${name}${suffix}" -type f -exec mv {} "bin/${name}${suffix}" \;
-            chmod +x "bin/${name}${suffix}"
-            rm -rf "${extract_dir}"
-          }
-
-          download_plugin "infracost-parser-plugin" "${{ inputs.parserVersion }}"
-          download_plugin "infracost-provider-plugin-aws" "${{ inputs.awsProviderVersion }}"
-          download_plugin "infracost-provider-plugin-azurerm" "${{ inputs.azureProviderVersion }}"
-          download_plugin "infracost-provider-plugin-google" "${{ inputs.gcpProviderVersion }}"
 
       - name: List bin contents
         run: ls -la bin/

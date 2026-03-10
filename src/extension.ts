@@ -29,19 +29,6 @@ function createClient(): LanguageClient {
     serverEnv.INFRACOST_DEBUG_UI = debugUI;
   }
 
-  const binDir = path.join(extensionPath, "bin");
-  const plugins: Record<string, string> = {
-    INFRACOST_CLI_PARSER_PLUGIN: "infracost-parser-plugin",
-    INFRACOST_CLI_PROVIDER_PLUGIN_AWS: "infracost-provider-plugin-aws",
-    INFRACOST_CLI_PROVIDER_PLUGIN_AZURERM: "infracost-provider-plugin-azurerm",
-    INFRACOST_CLI_PROVIDER_PLUGIN_GOOGLE: "infracost-provider-plugin-google",
-  };
-  for (const [envVar, binary] of Object.entries(plugins)) {
-    if (!serverEnv[envVar]) {
-      serverEnv[envVar] = path.join(binDir, binary);
-    }
-  }
-
   const serverOptions: ServerOptions = {
     command: serverPath,
     transport: TransportKind.stdio,
