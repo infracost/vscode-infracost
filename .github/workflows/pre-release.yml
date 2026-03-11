@@ -21,14 +21,14 @@ jobs:
     strategy:
       matrix:
         include:
-          # - vsce_target: win32-x64
-          #   go_os: windows
-          #   go_arch: amd64
-          #   archive_ext: zip
-          # - vsce_target: win32-arm64
-          #   go_os: windows
-          #   go_arch: arm64
-          #   archive_ext: zip
+          - vsce_target: win32-x64
+            go_os: windows
+            go_arch: amd64
+            archive_ext: zip
+          - vsce_target: win32-arm64
+            go_os: windows
+            go_arch: arm64
+            archive_ext: zip
           - vsce_target: linux-x64
             go_os: linux
             go_arch: amd64

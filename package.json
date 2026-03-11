@@ -58,6 +58,16 @@
           "default": "",
           "description": "Path to the lsp binary. Leave empty to use the bundled binary."
         },
+        "infracost.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug mode. Logs LSP trace output."
+        },
+        "infracost.debugUI": {
+          "type": "string",
+          "default": "",
+          "description": "Host and port for the debug UI server (e.g. \":7100\")."
+        },
         "infracost.runParamsCacheTTLSeconds": {
           "type": "number",
           "default": 300,

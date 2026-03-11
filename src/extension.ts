@@ -1,22 +1,23 @@
 import * as path from "path";
-import { commands, env, Uri, window, workspace, ExtensionContext } from "vscode";
+import * as vscode from "vscode";
 import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
   TransportKind,
 } from "vscode-languageclient/node";
+import { Trace } from "vscode-languageserver-protocol";
 import {
   ResourceViewProvider,
   ResourceDetailsResult,
 } from "./resourceView";
 
-let client: LanguageClient;
+let client: LanguageClient | undefined;
 let resourceViewProvider: ResourceViewProvider;
 let extensionPath: string;
 
 function createClient(): LanguageClient {
-  const config = workspace.getConfiguration("infracost");
+  const config = vscode.workspace.getConfiguration("infracost");
   const defaultPath = path.join(extensionPath, "bin", "infracost-ls");
   const serverPath = config.get<string>("serverPath") || defaultPath;
 
@@ -24,9 +25,12 @@ function createClient(): LanguageClient {
     string,
     string
   >;
-  const debugUI = config.get<string>("debugUI", "");
-  if (debugUI) {
-    serverEnv.INFRACOST_DEBUG_UI = debugUI;
+  const debug = config.get<boolean>("debug", false);
+  if (debug) {
+    const debugUI = config.get<string>("debugUI", "");
+    if (debugUI) {
+      serverEnv.INFRACOST_DEBUG_UI = debugUI;
+    }
   }
 
   const serverOptions: ServerOptions = {
@@ -44,6 +48,7 @@ function createClient(): LanguageClient {
     synchronize: {
       configurationSection: "infracost",
     },
+    traceOutputChannel: vscode.window.createOutputChannel("Infracost LSP Trace"),
   };
 
   return new LanguageClient(
@@ -54,14 +59,24 @@ function createClient(): LanguageClient {
   );
 }
 
-export function activate(context: ExtensionContext) {
+export function activate(context: vscode.ExtensionContext) {
   extensionPath = context.extensionPath;
   client = createClient();
-  client.start().then(() => checkAuthStatus());
+  
+  const debug = vscode.workspace.getConfiguration("infracost").get<boolean>("debug", false);
+
+  client.start().then(async () => {
+    if (!debug) {
+      await client?.setTrace(Trace.Off);
+    }
+    setTimeout(() => checkAuthStatus(), 1000);
+  }).catch((error) => {
+    vscode.window.showErrorMessage(`Failed to start Infracost language server: ${error}`);
+  });
 
   resourceViewProvider = new ResourceViewProvider();
   context.subscriptions.push(
-    window.registerWebviewViewProvider(
+    vscode.window.registerWebviewViewProvider(
       ResourceViewProvider.viewType,
       resourceViewProvider
     )
@@ -70,7 +85,7 @@ export function activate(context: ExtensionContext) {
   // Move the sidebar view to the secondary sidebar on first install.
   const movedKey = "infracost.resourceDetailsMoved";
   if (!context.globalState.get<boolean>(movedKey)) {
-    commands
+    vscode.commands
       .executeCommand("vscode.moveViews", {
         viewIds: [ResourceViewProvider.viewType],
         destinationId: "workbench.view.extension.infracost-secondary",
@@ -78,14 +93,16 @@ export function activate(context: ExtensionContext) {
       .then(
         () => context.globalState.update(movedKey, true),
         () => {
-          commands
+          vscode.commands
             .executeCommand("workbench.action.moveView", {
               id: ResourceViewProvider.viewType,
               to: "auxiliarybar",
             })
             .then(
               () => context.globalState.update(movedKey, true),
-              () => {}
+              () => {
+                // Ignore error if commands fail
+              }
             );
         }
       );
@@ -94,7 +111,7 @@ export function activate(context: ExtensionContext) {
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   context.subscriptions.push(
-    window.onDidChangeTextEditorSelection((e) => {
+    vscode.window.onDidChangeTextEditorSelection((e: vscode.TextEditorSelectionChangeEvent) => {
       if (!client || !isSupportedFile(e.textEditor.document.uri.fsPath)) {
         return;
       }
@@ -104,8 +121,12 @@ export function activate(context: ExtensionContext) {
       }
 
       debounceTimer = setTimeout(async () => {
+        if (!client) {
+          return;
+        }
+        
         const uri = e.textEditor.document.uri.toString();
-        const line = e.selections[0].active.line;
+        const { line } = e.selections[0].active;
 
         try {
           const result = await client.sendRequest<ResourceDetailsResult>(
@@ -122,7 +143,7 @@ export function activate(context: ExtensionContext) {
 
   // Triggered by code lens clicks — fetches resource details and reveals the sidebar.
   context.subscriptions.push(
-    commands.registerCommand("infracost.revealResource", async (uri: string, line: number) => {
+    vscode.commands.registerCommand("infracost.revealResource", async (uri: string, line: number) => {
       if (!client) {
         return;
       }
@@ -132,7 +153,7 @@ export function activate(context: ExtensionContext) {
           { uri, line }
         );
         resourceViewProvider.update(result);
-        commands.executeCommand(`${ResourceViewProvider.viewType}.focus`);
+        vscode.commands.executeCommand(`${ResourceViewProvider.viewType}.focus`);
       } catch {
         // Ignore errors
       }
@@ -140,7 +161,7 @@ export function activate(context: ExtensionContext) {
   );
 
   context.subscriptions.push(
-    commands.registerCommand("infracost.login", async () => {
+    vscode.commands.registerCommand("infracost.login", async () => {
       if (!client) {
         return;
       }
@@ -151,29 +172,36 @@ export function activate(context: ExtensionContext) {
           userCode: string;
         }>("infracost/login");
 
-        const choice = await window.showInformationMessage(
+        const choice = await vscode.window.showInformationMessage(
           `Enter code ${result.userCode} at ${result.verificationUri}`,
           "Open Browser",
           "Copy Code"
         );
         if (choice === "Open Browser") {
-          await env.openExternal(Uri.parse(result.verificationUriComplete));
+          await vscode.env.openExternal(vscode.Uri.parse(result.verificationUriComplete));
         } else if (choice === "Copy Code") {
-          await env.clipboard.writeText(result.userCode);
-          await env.openExternal(Uri.parse(result.verificationUriComplete));
+          await vscode.env.clipboard.writeText(result.userCode);
+          await vscode.env.openExternal(vscode.Uri.parse(result.verificationUriComplete));
         }
         // Clear the login view — the server will show "Scanning..." once auth completes.
         resourceViewProvider.update({ scanning: false });
       } catch (e) {
-        window.showErrorMessage(`Infracost login failed: ${e}`);
+        vscode.window.showErrorMessage(`Infracost login failed: ${e}`);
       }
     })
   );
 
   context.subscriptions.push(
-    commands.registerCommand("infracost.restartLsp", async () => {
+    vscode.commands.registerCommand("infracost.restartLsp", async () => {
       if (client && client.isRunning()) {
-        await client.stop();
+        try {
+          // send a shutdown request to allow the server to clean up before killing the process
+          await client.sendRequest("shutdown");
+          await client.stop();
+        }
+        catch {
+          // Ignore errors during stop
+        }
       }
       client = createClient();
       await client.start();
@@ -199,21 +227,34 @@ async function checkAuthStatus() {
     return;
   }
   try {
-    const result = await client.sendRequest<ResourceDetailsResult>(
+    // Use a promise with timeout to avoid hanging indefinitely
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), 5000);
+    });
+    
+    const requestPromise = client.sendRequest<ResourceDetailsResult>(
       "infracost/resourceDetails",
       { uri: "", line: 0 }
     );
+    
+    const result = await Promise.race([requestPromise, timeoutPromise]);
+    
     if (result.needsLogin) {
       resourceViewProvider.showLogin();
+    } else if (!result.scanning) {
+      // If not scanning and not needing login, show empty state
+      resourceViewProvider.update({ scanning: false });
     }
-  } catch {
-    // Ignore — server may not be ready yet
+  } catch (error) {
+    // If auth check fails, show empty state instead of staying in scanning
+    resourceViewProvider.update({ scanning: false });
   }
 }
 
-export function deactivate(): Thenable<void> | undefined {
+export async function deactivate(): Promise<void> {
   if (!client) {
-    return undefined;
+    return;
   }
-  return client.stop();
+  await client.dispose();
+  client = undefined;
 }
