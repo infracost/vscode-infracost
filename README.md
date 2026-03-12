@@ -4,26 +4,28 @@ Infracost's VS Code extension shows you cost estimates for Terraform right in yo
 
 ## Features
 
+## Cost estimates
+
 ### Inline cost estimates
 
 See cost estimates as code lenses directly above Terraform resource definitions. Costs update as you edit.
 
 <!-- TODO: screenshot of code lenses in a .tf file -->
-![Inline cost estimates](.github/assets/placeholder-code-lenses.png)
+![Inline cost estimates](.github/assets/code-lense.png)
 
 ### Resource details sidebar
 
 Click a code lens to open the resource details panel, showing a full cost component breakdown, FinOps policy violations, and tagging issues.
 
 <!-- TODO: screenshot of the resource details sidebar -->
-![Resource details sidebar](.github/assets/placeholder-sidebar.png)
+![Resource details sidebar](.github/assets/sidebar.png)
 
 ### FinOps policies and tag issues
 
 The extension highlights FinOps policy violations (with risk, effort, and potential savings) and tag policy issues directly in the sidebar. Blocking violations are clearly marked.
 
 <!-- TODO: screenshot showing violations/tag issues in sidebar -->
-![FinOps policies](.github/assets/placeholder-finops.png)
+![FinOps policies](.github/assets/finops.png)
 
 ### CloudFormation support
 
@@ -45,8 +47,7 @@ Or in VS Code: open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`), run **
 
 Open the Infracost sidebar and click **Login to Infracost**. This will open a browser window to authenticate your editor with your Infracost account.
 
-<!-- TODO: screenshot of the login view in the sidebar -->
-![Login](.github/assets/placeholder-login.png)
+![Login](.github/assets/login.png)
 
 ### 3. Open a Terraform project
 

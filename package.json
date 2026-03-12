@@ -75,6 +75,17 @@
         }
       }
     },
+    "languages": [
+      {
+        "id": "terraform",
+        "extensions": [
+          ".tf"
+        ],
+        "aliases": [
+          "Terraform"
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "infracost.login",
@@ -102,6 +113,7 @@
     "@types/vscode": "^1.75.0",
     "@typescript-eslint/eslint-plugin": "^5.59.9",
     "@typescript-eslint/parser": "^5.59.1",
+    "@vscode/vsce": "^3.7.1",
     "eslint": "^8.40.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.8.0",
@@ -110,7 +122,6 @@
     "prettier": "^2.8.8",
     "ts-loader": "^9.4.2",
     "typescript": "^5.0.4",
-    "vsce": "^2.9.2",
     "webpack": "^5.77.0",
     "webpack-cli": "^5.0.2"
   },

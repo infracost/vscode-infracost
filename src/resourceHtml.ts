@@ -206,7 +206,7 @@ export function renderScanning(): string {
 
 export function renderLogin(): string {
   return renderPage(`<div class="state">
-  <p>Login to Infracost to see cloud costs, FinOps policies, and tag issues.</p>
+  <p>Login to Infracost Cloud to see Costs, FinOps policies, and Tagging issues.</p>
   <button class="login-btn" onclick="(function(){const vscode=acquireVsCodeApi();vscode.postMessage({command:'login'})})()">Login to Infracost</button>
 </div>`);
 }
