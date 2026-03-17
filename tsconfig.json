@@ -9,5 +9,5 @@
 		"rootDir": "src",
 		"strict": true,
 	},
-	"include": ["src", "index.d.ts"]
+	"include": ["src"]
 }

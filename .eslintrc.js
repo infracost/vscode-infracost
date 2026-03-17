@@ -32,28 +32,5 @@ module.exports = {
   ignorePatterns: [
     'webpack.config.js',
   ],
-  overrides: [
-    {
-      files: ['vitest.config.ts'],
-      rules: {
-        'import/no-unresolved': 'off',
-        'consistent-return': 'off',
-      },
-    },
-    {
-      files: ['**/__test__/**'],
-      rules: {
-        'import/no-extraneous-dependencies': 'off',
-        '@typescript-eslint/no-explicit-any': 'off',
-        '@typescript-eslint/no-non-null-assertion': 'off',
-        '@typescript-eslint/no-var-requires': 'off',
-        'lines-between-class-members': 'off',
-        'no-underscore-dangle': 'off',
-        'no-param-reassign': 'off',
-        'dot-notation': 'off',
-        'import/first': 'off',
-        'global-require': 'off',
-      },
-    },
-  ],
+  overrides: [],
 };

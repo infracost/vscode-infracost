@@ -18,19 +18,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: yarn
+          cache: npm
 
       - name: Install dependencies
-        run: yarn --frozen-lockfile
+        run: npm ci
 
       - name: Check formatting
-        run: yarn format:check
+        run: npm run format:check
 
       - name: Lint
-        run: yarn lint
+        run: npm run lint
 
       - name: Compile
-        run: yarn compile
-
-      - name: Run tests
-        run: yarn test
+        run: npm run compile

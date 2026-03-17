@@ -1,8 +1,12 @@
 .vscode
 node_modules
-out/
 src/
-scripts/
 tsconfig.json
 webpack.config.js
 .github
+.eslintrc.js
+.prettierrc
+.gitignore
+.scratch
+.claude
+package-lock.json

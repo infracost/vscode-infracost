@@ -34,14 +34,6 @@ const extensionConfig = {
           }
         ]
       },
-      {
-        test: /\.(hbs)$/i,
-        use: [
-          {
-            loader: 'file-loader',
-          },
-        ],
-      },
     ]
   },
   devtool: 'nosources-source-map',

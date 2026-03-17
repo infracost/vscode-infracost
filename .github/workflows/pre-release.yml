@@ -8,24 +8,8 @@ on:
         required: true
         type: string
       lspVersion:
-        description: "infracost-lsp version to bundle"
+        description: "lsp version to bundle"
         required: true
-        type: string
-      parserVersion:
-        description: "infracost-parser-plugin version (optional)"
-        required: false
-        type: string
-      awsProviderVersion:
-        description: "infracost-provider-plugin-aws version (optional)"
-        required: false
-        type: string
-      azureProviderVersion:
-        description: "infracost-provider-plugin-azurerm version (optional)"
-        required: false
-        type: string
-      gcpProviderVersion:
-        description: "infracost-provider-plugin-google version (optional)"
-        required: false
         type: string
 
 permissions:
@@ -66,94 +50,53 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create GitHub App token
-        uses: infracost/create-github-app-token@v1
-        id: app-token
-        with:
-          app-id: ${{ secrets.INFRACOST_CI_APP_ID }}
-          private-key: ${{ secrets.INFRACOST_CI_APP_PRIVATE_KEY }}
-          owner: infracost
-          repositories: "infracost-lsp,cli-poc"
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: yarn
+          cache: npm
 
       - name: Install dependencies
-        run: yarn
+        run: npm ci
 
-      - name: Download infracost-lsp
+      - name: Download lsp
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ github.token }} 
         run: |
           mkdir -p bin
           LSP_VERSION="${{ inputs.lspVersion }}"
           OS="${{ matrix.go_os }}"
           ARCH="${{ matrix.go_arch }}"
           EXT="${{ matrix.archive_ext }}"
-          ARCHIVE="infracost-lsp_${OS}_${ARCH}.${EXT}"
+          ARCHIVE="lsp_${OS}_${ARCH}.${EXT}"
 
           gh release download "v${LSP_VERSION}" \
-            --repo infracost/infracost-lsp \
+            --repo infracost/lsp \
             --pattern "${ARCHIVE}" \
             --dir /tmp
 
+          EXTRACT_DIR=$(mktemp -d)
           if [ "${EXT}" = "zip" ]; then
-            unzip -o "/tmp/${ARCHIVE}" -d /tmp/lsp-extract
-            mv /tmp/lsp-extract/infracost-lsp.exe bin/infracost-lsp.exe
+            unzip -o "/tmp/${ARCHIVE}" -d "${EXTRACT_DIR}"
           else
-            tar xzf "/tmp/${ARCHIVE}" -C /tmp
-            mv /tmp/infracost-lsp bin/infracost-lsp
-            chmod +x bin/infracost-lsp
+            tar xzf "/tmp/${ARCHIVE}" -C "${EXTRACT_DIR}"
           fi
 
-      - name: Download plugins
-        if: inputs.parserVersion != '' || inputs.awsProviderVersion != '' || inputs.azureProviderVersion != '' || inputs.gcpProviderVersion != ''
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          OS="${{ matrix.go_os }}"
-          ARCH="${{ matrix.go_arch }}"
-          EXT="${{ matrix.archive_ext }}"
+          SUFFIX=""
+          if [ "${OS}" = "windows" ]; then SUFFIX=".exe"; fi
 
-          download_plugin() {
-            local name="$1"
-            local version="$2"
-            if [ -z "${version}" ]; then
-              return
-            fi
-
-            local tag="${name}%2Fv${version}"
-            local archive="${name}_${version}_${OS}_${ARCH}.${EXT}"
-
-            echo "Downloading ${name} v${version} for ${OS}/${ARCH}..."
-            gh release download "${tag}" \
-              --repo infracost/cli-poc \
-              --pattern "${archive}" \
-              --dir /tmp
-
-            if [ "${EXT}" = "zip" ]; then
-              unzip -o "/tmp/${archive}" -d /tmp/plugin-extract
-              mv "/tmp/plugin-extract/${name}.exe" "bin/${name}.exe"
-            else
-              tar xzf "/tmp/${archive}" -C /tmp
-              mv "/tmp/${name}" "bin/${name}"
-              chmod +x "bin/${name}"
-            fi
-          }
-
-          download_plugin "infracost-parser-plugin" "${{ inputs.parserVersion }}"
-          download_plugin "infracost-provider-plugin-aws" "${{ inputs.awsProviderVersion }}"
-          download_plugin "infracost-provider-plugin-azurerm" "${{ inputs.azureProviderVersion }}"
-          download_plugin "infracost-provider-plugin-google" "${{ inputs.gcpProviderVersion }}"
+          find "${EXTRACT_DIR}" -name "infracost-ls${SUFFIX}" -type f -exec mv {} "bin/infracost-ls${SUFFIX}" \;
+          if [ "${OS}" != "windows" ]; then chmod +x "bin/infracost-ls"; fi
+          rm -rf "${EXTRACT_DIR}"
 
       - name: List bin contents
         run: ls -la bin/
 
+      - name: Set version
+        run: npm version "${{ inputs.version }}" --no-git-tag-version
+
       - name: Package extension
-        run: yarn vscode:package -- --target=${{ matrix.vsce_target }} --pre-release
+        run: npm run vscode:package -- --target=${{ matrix.vsce_target }} --pre-release
 
       - name: Upload vsix as artifact
         uses: actions/upload-artifact@v4

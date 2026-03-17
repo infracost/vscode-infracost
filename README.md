@@ -1,182 +1,96 @@
 # Infracost VS Code Extension
 
-Infracost's VS Code extension shows you cost estimates for Terraform right in your editor! Prevent costly infrastructure changes before they get into production.
-
-This helps with a few use-cases:
-- **Compare configs, instance types, regions etc**: copy/paste a code block, make changes and compare them.
-- **Quick cost estimate**: write a code block and get a cost estimate without having to use AWS, Azure or Google cost calculators, or read the long/complicated pricing web pages.
-- **Catch costly typos**: if you accidentally type 22 instead of 2 as the instance count, or 1000GB volume size instead of 100, the cost estimate will immediately pick that up and let you know.
+Infracost's VS Code extension shows you cost estimates for Terraform right in your editor! It also surfaces FinOps policies and tagging issues so you can catch problems before they reach production.
 
 ## Features
 
-See cost estimates right above their Terraform definitions. Infracost's output updates on file save.
+## Cost estimates
 
-![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/resources.gif?raw=true)
+### Inline cost estimates
 
-### Works with resources and modules
+See cost estimates as code lenses directly above Terraform resource definitions. Costs update as you edit.
 
-Both `resource` and `module` blocks are supported. **3rd party module blocks** are also supported!
+<!-- TODO: screenshot of code lenses in a .tf file -->
+![Inline cost estimates](.github/assets/code-lense.png)
 
-![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/modules.gif?raw=true)
+### Resource details sidebar
 
-### See cost breakdown
+Click a code lens to open the resource details panel, showing a full cost component breakdown, FinOps policy violations, and tagging issues.
 
-If a simple monthly cost isn't enough for you, just click the overview to see a cost breakdown.
+<!-- TODO: screenshot of the resource details sidebar -->
+![Resource details sidebar](.github/assets/sidebar.png)
 
-![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/webview.gif?raw=true)
+### FinOps policies and tag issues
 
-### Navigate your projects by costs
+The extension highlights FinOps policy violations (with risk, effort, and potential savings) and tag policy issues directly in the sidebar. Blocking violations are clearly marked.
 
-See a tree overview of your Infrastructure costs. See which projects, files and blocks have the most impact to your budget.
+<!-- TODO: screenshot showing violations/tag issues in sidebar -->
+![FinOps policies](.github/assets/finops.png)
 
-![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/tree-view.gif?raw=true)
+### CloudFormation support
+
+In addition to Terraform (`.tf`) files, the extension supports CloudFormation templates in YAML and JSON.
 
 ## Get started
 
-### 1. Install VS Code extension
+### 1. Install the extension
 
-Open VS Code and install the [Infracost extension](https://marketplace.visualstudio.com/items?itemName=Infracost.infracost).
+Download the `.vsix` file for your platform from the [latest pre-release](https://github.com/infracost/vscode-infracost/releases). Then install it manually:
 
-### 2. Connect VS Code to Infracost
-
-Once you've installed the extension, you'll need to connect to your editor to your Infracost account. Click the "connect to Infracost" button in the Infracost sidebar.
-
- ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/connect-to-cloud.png?raw=true)
-
-This will open a browser window where you'll be able to log in to Infracost Cloud and authenticate your editor. See the [Troubleshooting](#troubleshooting) section if this does not work.
-
-### 3. Use extension
-
-If you've done the prior steps correctly you'll should now see the Infracost sidebar, showing the costs of the auto-detected Terraform projects within your workspace.
-
-![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/tree-view.gif?raw=true)
-
-### 4. Create a Infracost config file
-
-Whilst the Infracost VS Code extension supports auto-detecting projects, this is normally only recommended to get up and running. To get Infracost showing accurate project costs, you'll need to add an Infracost config file at the root of your workspace. This defines the Terraform projects within your workspace and how Infracost should handle them. For example:
-
-```yaml
-version: 0.1
-projects:
-  - path: dev
-    name: development
-    usage_file: dev/infracost-usage.yml
-    terraform_var_files:
-      - dev.tfvars
-
-  - path: prod
-    name: production
-    usage_file: prod/infracost-usage.yml
-    terraform_vars:
-      instance_count: 5
-      artifact_version: foobar
+```sh
+code --install-extension infracost-0.2.35-darwin-arm64.vsix
 ```
 
-You can read more about how the config file works and which fields it supports by reading our [dedicated documentation](https://www.infracost.io/docs/features/config_file/).
+Or in VS Code: open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`), run **Extensions: Install from VSIX...**, and select the downloaded file.
 
-When adding a config file to your workspace, it must be placed at the **root directory** of your workspace, and named either `infracost.yml` for a static config file or `infracost.yml.tmpl` for a [dynamic config files](https://www.infracost.io/docs/features/config_file/#dynamic-config-files).
+### 2. Login to Infracost
 
-### 5. Cost estimates in pull requests
+Open the Infracost sidebar and click **Login to Infracost**. This will open a browser window to authenticate your editor with your Infracost account.
 
-[Use our CI/CD integrations](https://www.infracost.io/docs/integrations/cicd/) to add cost estimates to pull requests. This provides your team with a safety net as people can understand cloud costs upfront, and discuss them as part of your workflow.
+![Login](.github/assets/login.png)
 
-![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/cicd-integration.png?raw=true)
+### 3. Open a Terraform project
+
+Open a workspace containing Terraform files. The extension will start the language server and begin scanning your project. Cost estimates will appear as code lenses above resource blocks.
+
+### 4. Cost estimates in pull requests
+
+[Use our CI/CD integrations](https://www.infracost.io/docs/integrations/cicd/) to add cost estimates to pull requests, giving your team visibility into cloud costs as part of your workflow.
 
 ## Requirements
 
-The Infracost VS Code extension requires you to have:
+* VS Code **v1.75.0** or above
+* An [Infracost](https://www.infracost.io) account
 
-* VS Code **v1.67.0** or above.
-* The [Terraform VS Code extension](https://marketplace.visualstudio.com/items?itemName=HashiCorp.terraform) installed and enabled in VS Code.
+## Configuration
 
-## FAQs
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `infracost.serverPath` | Path to the `lsp` binary. Leave empty to use the bundled binary. | (bundled) |
+| `infracost.runParamsCacheTTLSeconds` | How long (in seconds) to cache run parameters between API calls. Set to 0 to disable. | `300` |
 
-### How can I supply input variables to Infracost VS Code extension?
+## Commands
 
-To supply input variables for your Terraform projects, we recommend you add a [config file](https://www.infracost.io/docs/features/config_file/). Config files allow you to add any number of variable files for defined projects. Infracost also auto-detects any var files called `terraform.tfvars`, or `*.auto.tfvars` at the root level of your Terraform projects. e.g:
-
-```yaml
-version: 0.1
-projects:
-  - path: dev
-    name: development
-    usage_file: dev/infracost-usage.yml
-    terraform_var_files:
-      - dev.tfvars
-      - global.tfvars
-```
-
-Both HCL and JSON var files are supported, JSON var files must include a `.json` suffix.
-
-### How do I supply a usage file to the Infracost VS Code extension?
-
-To supply input variables for your Terraform projects, we recommend you add a [config file](https://www.infracost.io/docs/features/config_file/). Config files allow you to define a usage file for each project you specify, e.g:
-
-```yaml
-version: 0.1
-projects:
-  - path: dev
-    usage_file: dev/infracost-usage.yml
-  - path: prod
-    usage_file: prod/infracost-usage.yml
-```
-
-### I see a lot of resources showing $0.00 costs, why is this?
-
-These resources are likely usage-based resources. For example, AWS Lambda is billed per request, so unless you specify the number of requests that the function receives. You're likely to see a message similar to the following: " Cost depends on usage: $0.20 per 1M requests" in the resource breakdown.
-
-To specify usage for resources, add a [usage file](https://www.infracost.io/docs/features/usage_based_resources/#specify-usage-manually) and reference it in a [config file](https://www.infracost.io/docs/features/config_file/) you add at the root of your workspace.
-
-### How can I configure the currency Infracost uses?
-
-If you have the `infracost` CLI installed, you can set the currency by running `infracost configure set currency EUR` (check `infracost configure --help` for other configuration options). Otherwise, update the global infracost configuration file (found at `~/.config/infracost/configuration.yml`) with the following:
-
-```yaml
-version: "0.1"
-currency: EUR
-```
-
-Infracost supports all ISO 4217 currency codes. [This FAQ](https://www.infracost.io/docs/faq/#can-i-show-costs-in-a-different-currency) has more details.
+| Command | Description |
+|---------|-------------|
+| `Infracost: Login` | Authenticate with your Infracost account |
+| `Infracost: Restart Language Server` | Restart the LSP if it gets into a bad state |
 
 ## Troubleshooting
 
-### Known Issues
+### Locating logs
 
-* The extension is not designed to work in the context of a **multi-repo workspace**. We recommend opening one repo per workspace.
-* When opening a workspace with a large number of Terraform projects for the first time. Infracost will evaluate all the projects and download any required modules. This means
-  that it might take some time before pricing information is available. If you're worried that Infracost VS Code extension isn't working in your workspace but haven't got
-  any error messages, it is likely that Infracost is still indexing your workspace. The extension has a status bar on the right-hand side of the editor which will show a loading state
-  when Infracost is running.
+1. Open the Output panel (View -> Output).
+2. Select **Infracost** from the dropdown to see language server logs.
 
-  ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/loading.png?raw=true)  
-* Terragrunt is not supported. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/4) for more information for future updates about Terragrunt support.
-* [Diff functionality](https://www.infracost.io/docs/features/cli_commands/#diff) is not yet supported. Follow [this issue](https://github.com/infracost/vscode-infracost/issues/8) to receive updates on diff support.
-* If the "Connect VSCode to Infracost" button does not work:
-  1. Register for a free API key from [here](https://dashboard.infracost.io/). This is used by the extension to retrieve prices from our Cloud Pricing API, e.g. get prices for instance types.
-  2. [Install](https://www.infracost.io/docs/#1-install-infracost) the `infracost` CLI.
-  3. Run `infracost configure set api_key MY_API_KEY_HERE`.
-  4. Re-open the VSCode extension, it should now skip the "connect to Infracost" step as it uses the same API key from the CLI.
-
-### Locating Infracost error logs
-
-If you're having problems with the extension and your problem isn't any of the **known issues** above, you can find the Infracost extension logs using the following method:
-
-1. Open the extension terminal using the top menu (Terminal->New Terminal)
-2. Select **Output** and **Infracost Debug** from the dropdown.
-   ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/infracost-debug-log.png?raw=true)
-3. There are sometimes additional CLI logs hidden in the **log (Window)** output.
-   ![](https://github.com/infracost/vscode-infracost/blob/master/.github/assets/error-logs.png?raw=true)
-
-The log there might give you more information for a problem you can fix on your own, e.g. syntax errors. If it's something more ominous please [raise an issue](https://github.com/infracost/vscode-infracost/issues), so that we can identify and fix the problem. Please include as much of the log information as you can and any other helpful information like OS and VS Code workspace size.
+If you're having issues, please [raise an issue](https://github.com/infracost/vscode-infracost/issues) with as much log information as you can, along with your OS and VS Code version.
 
 ## Contributing
 
-We love any contribution, big or small. If you want to change the Infracost VS Code extension, we recommend you use VS Code to build and develop the extension locally.
-
 1. Clone the repo.
-2. `yarn` install all the dependencies.
+2. `npm install` to install dependencies.
 3. Open the repo in VS Code.
-4. Inside the editor, press F5. VS Code will compile and run the extension in a new Development Host window.
-5. Open a Terraform project, and navigate to a valid file. If all the previous steps have been followed correctly, you should see Infracost cost estimates above supported resource blocks.
+4. Press F5 to launch the extension in a Development Host window.
+5. Open a Terraform project to see cost estimates above resource blocks.
 
-Once you're finished with your work, open a PR, and we'll be happy to review it as soon as possible. 
+Open a PR when you're ready and we'll review it.
