@@ -32,7 +32,13 @@ interface TagViolationDetail {
   blockPR: boolean;
   message: string;
   missingTags?: string[];
-  invalidTags?: { key: string; value: string; suggestion?: string; message?: string; validValues?: string[] }[];
+  invalidTags?: {
+    key: string;
+    value: string;
+    suggestion?: string;
+    message?: string;
+    validValues?: string[];
+  }[];
 }
 
 export interface ResourceDetail {
@@ -239,7 +245,9 @@ function renderResource(r: ResourceDetail): string {
         <table>
           <thead><tr><th>Component</th><th>Qty</th><th>Unit</th><th>Price</th><th>Monthly</th></tr></thead>
           <tbody>
-            ${r.costComponents.map(c => `
+            ${r.costComponents
+              .map(
+                (c) => `
               <tr>
                 <td>${esc(c.name)}</td>
                 <td class="num">${esc(c.monthlyQuantity)}</td>
@@ -247,7 +255,9 @@ function renderResource(r: ResourceDetail): string {
                 <td class="num">${esc(c.price)}</td>
                 <td class="num">${esc(c.monthlyCost)}</td>
               </tr>
-            `).join("")}
+            `
+              )
+              .join('')}
           </tbody>
         </table>
       </details>
@@ -258,7 +268,7 @@ function renderResource(r: ResourceDetail): string {
     parts.push(`
       <details class="section" open>
         <summary>FinOps Issues (${r.violations.length})</summary>
-        ${r.violations.map(v => renderViolation(v)).join("")}
+        ${r.violations.map((v) => renderViolation(v)).join('')}
       </details>
     `);
   }
@@ -267,12 +277,12 @@ function renderResource(r: ResourceDetail): string {
     parts.push(`
       <details class="section" open>
         <summary>Tag Issues (${r.tagViolations.length})</summary>
-        ${r.tagViolations.map(v => renderTagViolation(v)).join("")}
+        ${r.tagViolations.map((v) => renderTagViolation(v)).join('')}
       </details>
     `);
   }
 
-  return parts.join("");
+  return parts.join('');
 }
 
 function renderViolation(v: ViolationDetail): string {
@@ -283,39 +293,68 @@ function renderViolation(v: ViolationDetail): string {
 
   if (v.policyDetail?.risk) {
     const cls = v.policyDetail.risk.toLowerCase();
-    badges.push(`<span class="badge ${cls}">Risk: ${esc(sentenceCase(v.policyDetail.risk))}</span>`);
+    badges.push(
+      `<span class="badge ${cls}">Risk: ${esc(sentenceCase(v.policyDetail.risk))}</span>`
+    );
   }
   if (v.policyDetail?.effort) {
     const cls = v.policyDetail.effort.toLowerCase();
-    badges.push(`<span class="badge ${cls}">Effort: ${esc(sentenceCase(v.policyDetail.effort))}</span>`);
+    badges.push(
+      `<span class="badge ${cls}">Effort: ${esc(sentenceCase(v.policyDetail.effort))}</span>`
+    );
   }
   if (v.policyDetail?.downtime) {
     const cls = v.policyDetail.downtime.toLowerCase();
-    badges.push(`<span class="badge ${cls}">Downtime: ${esc(sentenceCase(v.policyDetail.downtime))}</span>`);
+    badges.push(
+      `<span class="badge ${cls}">Downtime: ${esc(sentenceCase(v.policyDetail.downtime))}</span>`
+    );
   }
 
-  let details = "";
+  let details = '';
   if (v.policyDetail) {
     const pd = v.policyDetail;
     const rows: string[] = [];
-    if (pd.riskDescription) { rows.push(`<div class="detail-row"><strong>Risk</strong><div>${linkify(pd.riskDescription)}</div></div>`); }
-    if (pd.effortDescription) { rows.push(`<div class="detail-row"><strong>Effort</strong><div>${linkify(pd.effortDescription)}</div></div>`); }
-    if (pd.downtimeDescription) { rows.push(`<div class="detail-row"><strong>Downtime</strong><div>${linkify(pd.downtimeDescription)}</div></div>`); }
-    if (pd.additionalDetails) { rows.push(`<div class="detail-row">${linkify(pd.additionalDetails)}</div>`); }
+    if (pd.riskDescription) {
+      rows.push(
+        `<div class="detail-row"><strong>Risk</strong><div>${linkify(
+          pd.riskDescription
+        )}</div></div>`
+      );
+    }
+    if (pd.effortDescription) {
+      rows.push(
+        `<div class="detail-row"><strong>Effort</strong><div>${linkify(
+          pd.effortDescription
+        )}</div></div>`
+      );
+    }
+    if (pd.downtimeDescription) {
+      rows.push(
+        `<div class="detail-row"><strong>Downtime</strong><div>${linkify(
+          pd.downtimeDescription
+        )}</div></div>`
+      );
+    }
+    if (pd.additionalDetails) {
+      rows.push(`<div class="detail-row">${linkify(pd.additionalDetails)}</div>`);
+    }
     if (rows.length > 0) {
-      details = `<div class="policy-details">${rows.join("")}</div>`;
+      details = `<div class="policy-details">${rows.join('')}</div>`;
     }
   }
 
-  const savings = v.monthlySavings && v.monthlySavings !== "$0.00"
-    ? `<div class="savings">Potential savings: ${esc(v.monthlySavings.replace(/^-/, ""))}/mo</div>`
-    : "";
+  const savings =
+    v.monthlySavings && v.monthlySavings !== '$0.00'
+      ? `<div class="savings">Potential savings: ${esc(
+          v.monthlySavings.replace(/^-/, '')
+        )}/mo</div>`
+      : '';
 
   return `
     <details class="violation">
       <summary>
         <strong>${esc(v.policyDetail?.shortTitle || v.policyName)}</strong>
-        <div class="badges">${badges.join("")}</div>
+        <div class="badges">${badges.join('')}</div>
       </summary>
       <div class="violation-message">${linkify(v.message)}</div>
       ${savings}
@@ -330,21 +369,34 @@ function renderTagViolation(v: TagViolationDetail): string {
     badges.push(`<span class="badge blocking">Blocking</span>`);
   }
 
-  let tagList = "";
+  let tagList = '';
   if (v.missingTags && v.missingTags.length > 0) {
-    tagList += `<div class="tag-list"><strong>Missing:</strong> ${v.missingTags.map(t => `<code>${esc(t)}</code>`).join(", ")}</div>`;
+    tagList += `<div class="tag-list"><strong>Missing:</strong> ${v.missingTags
+      .map((t) => `<code>${esc(t)}</code>`)
+      .join(', ')}</div>`;
   }
   if (v.invalidTags && v.invalidTags.length > 0) {
-    tagList += v.invalidTags.map(t =>
-      `<div class="tag-list"><strong>${esc(t.key)}:</strong> <code>${esc(t.value)}</code>${t.suggestion ? ` (suggestion: <code>${esc(t.suggestion)}</code>)` : ""}${t.validValues && t.validValues.length > 0 ? `<div class="tag-list">Valid values: ${t.validValues.map(val => `<code>${esc(val)}</code>`).join(", ")}</div>` : ""}</div>`
-    ).join("");
+    tagList += v.invalidTags
+      .map(
+        (t) =>
+          `<div class="tag-list"><strong>${esc(t.key)}:</strong> <code>${esc(t.value)}</code>${
+            t.suggestion ? ` (suggestion: <code>${esc(t.suggestion)}</code>)` : ''
+          }${
+            t.validValues && t.validValues.length > 0
+              ? `<div class="tag-list">Valid values: ${t.validValues
+                  .map((val) => `<code>${esc(val)}</code>`)
+                  .join(', ')}</div>`
+              : ''
+          }</div>`
+      )
+      .join('');
   }
 
   return `
     <div class="violation">
       <div class="violation-header">
         <strong>${esc(v.policyName)}</strong>
-        <div class="badges">${badges.join("")}</div>
+        <div class="badges">${badges.join('')}</div>
       </div>
       <div class="violation-message">${linkify(v.message)}</div>
       ${tagList}
@@ -354,10 +406,10 @@ function renderTagViolation(v: TagViolationDetail): string {
 
 function esc(s: string): string {
   return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function sentenceCase(s: string): string {
@@ -366,15 +418,12 @@ function sentenceCase(s: string): string {
 
 function linkify(s: string): string {
   return esc(s)
-    .replace(
-      /&lt;a href=&quot;(.*?)&quot;(.*?)&gt;(.*?)&lt;\/a&gt;/g,
-      (_, url, _attrs, text) => {
-        const href = url.replace(/&amp;/g, "&");
-        if (!/^https?:\/\//i.test(href)) {
-          return text;
-        }
-        return `<a href="${url}">${text}</a>`;
-      },
-    )
+    .replace(/&lt;a href=&quot;(.*?)&quot;(.*?)&gt;(.*?)&lt;\/a&gt;/g, (_, url, _attrs, text) => {
+      const href = url.replace(/&amp;/g, '&');
+      if (!/^https?:\/\//i.test(href)) {
+        return text;
+      }
+      return `<a href="${url}">${text}</a>`;
+    })
     .replace(/`([^`]+)`/g, '<code>$1</code>');
 }
