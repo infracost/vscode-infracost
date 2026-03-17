@@ -1,3 +1,7 @@
+[![Open VSX Version](https://img.shields.io/open-vsx/v/infracost/infracost)](https://open-vsx.org/extension/infracost/infracost) [![Version](https://img.shields.io/visual-studio-marketplace/v/infracost.infracost)](https://marketplace.visualstudio.com/items?itemName=Infracost.infracost)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/infracost.infracost)](https://marketplace.visualstudio.com/items?itemName=Infracost.infracost)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/infracost.infracost)](https://marketplace.visualstudio.com/items?itemName=Infracost.infracost)
+
 # Infracost VS Code Extension
 
 Infracost's VS Code extension shows you cost estimates for Terraform right in your editor! It also surfaces FinOps policies and tagging issues so you can catch problems before they reach production.
@@ -11,6 +15,7 @@ Infracost's VS Code extension shows you cost estimates for Terraform right in yo
 See cost estimates as code lenses directly above Terraform resource definitions. Costs update as you edit.
 
 <!-- TODO: screenshot of code lenses in a .tf file -->
+
 ![Inline cost estimates](.github/assets/code-lense.png)
 
 ### Resource details sidebar
@@ -18,6 +23,7 @@ See cost estimates as code lenses directly above Terraform resource definitions.
 Click a code lens to open the resource details panel, showing a full cost component breakdown, FinOps policy violations, and tagging issues.
 
 <!-- TODO: screenshot of the resource details sidebar -->
+
 ![Resource details sidebar](.github/assets/sidebar.png)
 
 ### FinOps policies and tag issues
@@ -25,6 +31,7 @@ Click a code lens to open the resource details panel, showing a full cost compon
 The extension highlights FinOps policy violations (with risk, effort, and potential savings) and tag policy issues directly in the sidebar. Blocking violations are clearly marked.
 
 <!-- TODO: screenshot showing violations/tag issues in sidebar -->
+
 ![FinOps policies](.github/assets/finops.png)
 
 ### CloudFormation support
@@ -59,21 +66,21 @@ Open a workspace containing Terraform files. The extension will start the langua
 
 ## Requirements
 
-* VS Code **v1.75.0** or above
-* An [Infracost](https://www.infracost.io) account
+- VS Code **v1.75.0** or above
+- An [Infracost](https://www.infracost.io) account
 
 ## Configuration
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `infracost.serverPath` | Path to the `lsp` binary. Leave empty to use the bundled binary. | (bundled) |
-| `infracost.runParamsCacheTTLSeconds` | How long (in seconds) to cache run parameters between API calls. Set to 0 to disable. | `300` |
+| Setting                              | Description                                                                           | Default   |
+| ------------------------------------ | ------------------------------------------------------------------------------------- | --------- |
+| `infracost.serverPath`               | Path to the `lsp` binary. Leave empty to use the bundled binary.                      | (bundled) |
+| `infracost.runParamsCacheTTLSeconds` | How long (in seconds) to cache run parameters between API calls. Set to 0 to disable. | `300`     |
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `Infracost: Login` | Authenticate with your Infracost account |
+| Command                              | Description                                 |
+| ------------------------------------ | ------------------------------------------- |
+| `Infracost: Login`                   | Authenticate with your Infracost account    |
 | `Infracost: Restart Language Server` | Restart the LSP if it gets into a bad state |
 
 ## Troubleshooting
