@@ -110,7 +110,7 @@ jobs:
       - name: Publish to VS Marketplace
         run: npx vsce publish --packagePath $(find . -iname *.vsix) -p ${{ secrets.MARKETPLACE_PAT }}
       - name: Publish to OpenVSX
-        run: npx ovsx publish $(find . -iname *.vsix) -p ${{ secrets.OPEN_VSX_PAT }}
+        run: find . -iname '*.vsix' -exec npx ovsx publish {} -p ${{ secrets.OPEN_VSX_PAT }} \;
       - name: Create GitHub release
         id: create_release
         uses: softprops/action-gh-release@v1
