@@ -48,7 +48,10 @@ function createClient(): LanguageClient {
     synchronize: {
       configurationSection: "infracost",
     },
-    traceOutputChannel: vscode.window.createOutputChannel("Infracost LSP Trace"),
+    initializationOptions: {
+      clientName: "vscode",
+      extensionVersion: vscode.extensions.getExtension("Infracost.infracost")?.packageJSON?.version ?? "unknown",
+    },
   };
 
   return new LanguageClient(
@@ -69,7 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
     if (!debug) {
       await client?.setTrace(Trace.Off);
     }
-    setTimeout(() => checkAuthStatus(), 1000);
+    checkAuthStatus();
   }).catch((error) => {
     vscode.window.showErrorMessage(`Failed to start Infracost language server: ${error}`);
   });
@@ -195,8 +198,6 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("infracost.restartLsp", async () => {
       if (client && client.isRunning()) {
         try {
-          // send a shutdown request to allow the server to clean up before killing the process
-          await client.sendRequest("shutdown");
           await client.stop();
         }
         catch {
@@ -227,7 +228,6 @@ async function checkAuthStatus() {
     return;
   }
   try {
-    // Use a promise with timeout to avoid hanging indefinitely
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Request timeout')), 5000);
     });

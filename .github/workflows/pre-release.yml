@@ -86,7 +86,7 @@ jobs:
           if [ "${OS}" = "windows" ]; then SUFFIX=".exe"; fi
 
           find "${EXTRACT_DIR}" -name "infracost-ls${SUFFIX}" -type f -exec mv {} "bin/infracost-ls${SUFFIX}" \;
-          chmod +x "bin/infracost-ls${SUFFIX}"
+          if [ "${OS}" != "windows" ]; then chmod +x "bin/infracost-ls"; fi
           rm -rf "${EXTRACT_DIR}"
 
       - name: List bin contents

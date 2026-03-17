@@ -21,12 +21,9 @@ interface PolicyDetail {
 
 interface ViolationDetail {
   policyName: string;
-  policySlug: string;
   message: string;
-  attribute?: string;
   blockPullRequest: boolean;
   monthlySavings?: string;
-  savingsDetails?: string;
   policyDetail?: PolicyDetail;
 }
 
@@ -59,6 +56,7 @@ export function renderPage(body: string): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
 <style>
   body {
     font-family: var(--vscode-font-family);
@@ -338,7 +336,7 @@ function renderTagViolation(v: TagViolationDetail): string {
   }
   if (v.invalidTags && v.invalidTags.length > 0) {
     tagList += v.invalidTags.map(t =>
-      `<div class="tag-list"><strong>${esc(t.key)}:</strong> <code>${esc(t.value)}</code>${t.suggestion ? ` (suggestion: <code>${esc(t.suggestion)}</code>)` : ""}${t.validValues && t.validValues.length > 0 ? `<div class="tag-list">Valid values: ${t.validValues.map(v => `<code>${esc(v)}</code>`).join(", ")}</div>` : ""}</div>`
+      `<div class="tag-list"><strong>${esc(t.key)}:</strong> <code>${esc(t.value)}</code>${t.suggestion ? ` (suggestion: <code>${esc(t.suggestion)}</code>)` : ""}${t.validValues && t.validValues.length > 0 ? `<div class="tag-list">Valid values: ${t.validValues.map(val => `<code>${esc(val)}</code>`).join(", ")}</div>` : ""}</div>`
     ).join("");
   }
 
@@ -370,7 +368,13 @@ function linkify(s: string): string {
   return esc(s)
     .replace(
       /&lt;a href=&quot;(.*?)&quot;(.*?)&gt;(.*?)&lt;\/a&gt;/g,
-      (_, url, _attrs, text) => `<a href="${url.replace(/&amp;/g, "&")}">${text}</a>`,
+      (_, url, _attrs, text) => {
+        const href = url.replace(/&amp;/g, "&");
+        if (!/^https?:\/\//i.test(href)) {
+          return text;
+        }
+        return `<a href="${url}">${text}</a>`;
+      },
     )
     .replace(/`([^`]+)`/g, '<code>$1</code>');
 }
