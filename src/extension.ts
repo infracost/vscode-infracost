@@ -189,15 +189,19 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('infracost.restartLsp', async () => {
-      if (client && client.isRunning()) {
+      if (client) {
         try {
-          await client.stop();
+          await client.restart();
         } catch {
-          // Ignore errors during stop
+          // If restart fails, dispose and create a fresh client
+          await client.dispose();
+          client = createClient();
+          await client.start();
         }
+      } else {
+        client = createClient();
+        await client.start();
       }
-      client = createClient();
-      await client.start();
     })
   );
 }

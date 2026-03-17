@@ -10,41 +10,90 @@ permissions:
 
 jobs:
   build:
-    name: Release
+    name: Build ${{ matrix.vsce_target }}
     strategy:
       matrix:
         include:
           - vsce_target: win32-x64
-            npm_config_arch: x64
+            go_os: windows
+            go_arch: amd64
+            archive_ext: zip
           - vsce_target: win32-arm64
-            npm_config_arch: arm
+            go_os: windows
+            go_arch: arm64
+            archive_ext: zip
           - vsce_target: linux-x64
-            npm_config_arch: x64
+            go_os: linux
+            go_arch: amd64
+            archive_ext: tar.gz
           - vsce_target: linux-arm64
-            npm_config_arch: arm64
+            go_os: linux
+            go_arch: arm64
+            archive_ext: tar.gz
           - vsce_target: darwin-x64
-            npm_config_arch: x64
+            go_os: darwin
+            go_arch: amd64
+            archive_ext: tar.gz
           - vsce_target: darwin-arm64
-            npm_config_arch: arm64
+            go_os: darwin
+            go_arch: arm64
+            archive_ext: tar.gz
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Setup node
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
+
       - name: Setup Environment
         run: node -e "console.log('PACKAGE_VERSION=' + require('./package.json').version + '\nPACKAGE_NAME=' + require('./package.json').name + '-' + require('./package.json').version)" >> $GITHUB_ENV
+
       - name: Verify versions
         run: node -e "if ('refs/tags/v' + '${{ env.PACKAGE_VERSION }}' !== '${{ github.ref }}') { console.log('::error' + 'Version Mismatch. refs/tags/v' + '${{ env.PACKAGE_VERSION }}', '${{ github.ref }}'); throw Error('Version Mismatch')} "
-      - name: Install
+
+      - name: Install dependencies
         run: npm ci
+
+      - name: Download lsp
         env:
-          npm_config_arch: ${{ matrix.npm_config_arch }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p bin
+          LSP_VERSION=$(gh release view --repo infracost/lsp --json tagName -q '.tagName' | sed 's/^v//')
+          OS="${{ matrix.go_os }}"
+          ARCH="${{ matrix.go_arch }}"
+          EXT="${{ matrix.archive_ext }}"
+          ARCHIVE="lsp_${OS}_${ARCH}.${EXT}"
+
+          gh release download "v${LSP_VERSION}" \
+            --repo infracost/lsp \
+            --pattern "${ARCHIVE}" \
+            --dir /tmp
+
+          EXTRACT_DIR=$(mktemp -d)
+          if [ "${EXT}" = "zip" ]; then
+            unzip -o "/tmp/${ARCHIVE}" -d "${EXTRACT_DIR}"
+          else
+            tar xzf "/tmp/${ARCHIVE}" -C "${EXTRACT_DIR}"
+          fi
+
+          SUFFIX=""
+          if [ "${OS}" = "windows" ]; then SUFFIX=".exe"; fi
+
+          find "${EXTRACT_DIR}" -name "infracost-ls${SUFFIX}" -type f -exec mv {} "bin/infracost-ls${SUFFIX}" \;
+          if [ "${OS}" != "windows" ]; then chmod +x "bin/infracost-ls"; fi
+          rm -rf "${EXTRACT_DIR}"
+
+      - name: List bin contents
+        run: ls -la bin/
+
       - name: Package extension
         run: npm run vscode:package -- --target=${{ matrix.vsce_target }}
+
       - name: Upload vsix as artifact
         uses: actions/upload-artifact@v4
         with:
@@ -58,8 +107,10 @@ jobs:
     if: success() && startsWith( github.ref, 'refs/tags/v')
     steps:
       - uses: actions/download-artifact@v4
-      - name: Publish Extension
+      - name: Publish to VS Marketplace
         run: npx vsce publish --packagePath $(find . -iname *.vsix) -p ${{ secrets.MARKETPLACE_PAT }}
+      - name: Publish to OpenVSX
+        run: npx ovsx publish $(find . -iname *.vsix) -p ${{ secrets.OPEN_VSX_PAT }}
       - name: Create GitHub release
         id: create_release
         uses: softprops/action-gh-release@v1
