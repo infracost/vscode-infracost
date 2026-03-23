@@ -64,6 +64,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (!debug) {
         await client?.setTrace(Trace.Off);
       }
+      client?.onNotification('infracost/updateAvailable', handleUpdateAvailable);
       checkAuthStatus();
     })
     .catch((error) => {
@@ -169,14 +170,10 @@ export function activate(context: vscode.ExtensionContext) {
         }>('infracost/login');
 
         const choice = await vscode.window.showInformationMessage(
-          `Enter code ${result.userCode} at ${result.verificationUri}`,
-          'Open Browser',
-          'Copy Code'
+          `Verify the code in your browser matches: ${result.userCode}`,
+          'Open Browser'
         );
         if (choice === 'Open Browser') {
-          await vscode.env.openExternal(vscode.Uri.parse(result.verificationUriComplete));
-        } else if (choice === 'Copy Code') {
-          await vscode.env.clipboard.writeText(result.userCode);
           await vscode.env.openExternal(vscode.Uri.parse(result.verificationUriComplete));
         }
         // Clear the login view — the server will show "Scanning..." once auth completes.
@@ -244,6 +241,38 @@ async function checkAuthStatus() {
   } catch (error) {
     // If auth check fails, show empty state instead of staying in scanning
     resourceViewProvider.update({ scanning: false });
+  }
+}
+
+async function handleUpdateAvailable(params: {
+  updateAvailable: boolean;
+  latestVersion: string;
+  currentVersion: string;
+}) {
+  const choice = await vscode.window.showInformationMessage(
+    `Infracost Language Server update available: v${params.currentVersion} → v${params.latestVersion}`,
+    'Update'
+  );
+  if (choice !== 'Update' || !client) {
+    return;
+  }
+
+  try {
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: 'Updating Infracost Language Server...',
+      },
+      async () => {
+        await client?.sendRequest('infracost/update');
+      }
+    );
+    await vscode.commands.executeCommand('infracost.restartLsp');
+    vscode.window.showInformationMessage(
+      `Infracost Language Server updated to v${params.latestVersion}.`
+    );
+  } catch (e) {
+    vscode.window.showErrorMessage(`Infracost update failed: ${e}`);
   }
 }
 
