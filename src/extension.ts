@@ -65,6 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
         await client?.setTrace(Trace.Off);
       }
       client?.onNotification('infracost/updateAvailable', handleUpdateAvailable);
+      client?.onNotification('infracost/scanComplete', handleScanComplete);
       checkAuthStatus();
     })
     .catch((error) => {
@@ -241,6 +242,28 @@ async function checkAuthStatus() {
   } catch (error) {
     // If auth check fails, show empty state instead of staying in scanning
     resourceViewProvider.update({ scanning: false });
+  }
+}
+
+async function handleScanComplete() {
+  if (!client) {
+    return;
+  }
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || !isSupportedFile(editor.document.uri.fsPath)) {
+    return;
+  }
+
+  try {
+    const uri = editor.document.uri.toString();
+    const { line } = editor.selection.active;
+    const result = await client.sendRequest<ResourceDetailsResult>('infracost/resourceDetails', {
+      uri,
+      line,
+    });
+    resourceViewProvider.update(result);
+  } catch {
+    // Ignore errors
   }
 }
 
