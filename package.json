@@ -119,12 +119,12 @@
     "@typescript-eslint/eslint-plugin": "^5.59.9",
     "@typescript-eslint/parser": "^5.59.1",
     "@vscode/vsce": "^3.7.1",
-    "ovsx": "^0.10.9",
     "eslint": "^8.40.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-prettier": "^4.2.1",
+    "ovsx": "^0.10.9",
     "prettier": "^2.8.8",
     "ts-loader": "^9.4.2",
     "typescript": "^5.0.4",
@@ -132,6 +132,7 @@
     "webpack-cli": "^5.0.2"
   },
   "dependencies": {
+    "flatted": "^3.4.2",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver-protocol": "^3.17.5"
   }
