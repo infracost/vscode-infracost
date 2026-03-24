@@ -316,7 +316,11 @@ function renderResource(r: ResourceDetail, copilotAvailable: boolean): string {
   return parts.join('');
 }
 
-function renderViolation(v: ViolationDetail, resourceName: string, copilotAvailable: boolean): string {
+function renderViolation(
+  v: ViolationDetail,
+  resourceName: string,
+  copilotAvailable: boolean
+): string {
   const badges: string[] = [];
   if (v.blockPullRequest) {
     badges.push(`<span class="badge blocking">Blocking</span>`);
@@ -391,7 +395,9 @@ function renderViolation(v: ViolationDetail, resourceName: string, copilotAvaila
       promptParts.push(v.policyDetail.additionalDetails);
     }
     const prompt = promptParts.join('\n\n');
-    copilotBtn = `<div class="copilot-fix"><button class="copilot-fix-btn" data-prompt="${escAttr(prompt)}">Fix with Copilot</button></div>`;
+    copilotBtn = `<div class="copilot-fix"><button class="copilot-fix-btn" data-prompt="${escAttr(
+      prompt
+    )}">Fix with Copilot</button></div>`;
   }
 
   return `
