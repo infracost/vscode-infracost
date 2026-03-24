@@ -127,11 +127,10 @@ export function renderPage(body: string): string {
     user-select: none;
   }
   .violation > summary .badges {
-    display: inline-flex;
+    display: flex;
     gap: 4px;
     flex-wrap: wrap;
-    vertical-align: middle;
-    margin-left: 4px;
+    margin-top: 4px;
   }
   .violation-message {
     margin-top: 4px;
@@ -194,9 +193,41 @@ export function renderPage(body: string): string {
     border-radius: 3px;
     font-family: var(--vscode-editor-font-family);
   }
+  .copilot-fix {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+  .copilot-fix-btn {
+    display: inline-block;
+    padding: 3px 8px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-family: var(--vscode-font-family);
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+  }
+  .copilot-fix-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
 </style>
 </head>
-<body>${body}</body>
+<body>${body}
+<script>
+(function() {
+  const vscode = acquireVsCodeApi();
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.copilot-fix-btn');
+    if (btn) {
+      vscode.postMessage({ command: 'fixWithCopilot', prompt: btn.dataset.prompt });
+    }
+  });
+  document.addEventListener('infracost', function(e) {
+    vscode.postMessage(e.detail);
+  });
+})();
+</script>
+</body>
 </html>`;
 }
 
@@ -211,11 +242,11 @@ export function renderScanning(): string {
 export function renderLogin(): string {
   return renderPage(`<div class="state">
   <p>Login to Infracost Cloud to see Costs, FinOps policies, and Tagging issues.</p>
-  <button class="login-btn" onclick="(function(){const vscode=acquireVsCodeApi();vscode.postMessage({command:'login'})})()">Login to Infracost</button>
+  <button class="login-btn" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'login'}}))">Login to Infracost</button>
 </div>`);
 }
 
-export function renderResult(data: ResourceDetailsResult): string {
+export function renderResult(data: ResourceDetailsResult, copilotAvailable = false): string {
   if (data.scanning) {
     return renderScanning();
   }
@@ -225,10 +256,10 @@ export function renderResult(data: ResourceDetailsResult): string {
   if (!data.resource) {
     return renderEmpty();
   }
-  return renderPage(renderResource(data.resource));
+  return renderPage(renderResource(data.resource, copilotAvailable));
 }
 
-function renderResource(r: ResourceDetail): string {
+function renderResource(r: ResourceDetail, copilotAvailable: boolean): string {
   const parts: string[] = [];
 
   parts.push(`
@@ -268,7 +299,7 @@ function renderResource(r: ResourceDetail): string {
     parts.push(`
       <details class="section" open>
         <summary>FinOps Issues (${r.violations.length})</summary>
-        ${r.violations.map((v) => renderViolation(v)).join('')}
+        ${r.violations.map((v) => renderViolation(v, r.name, copilotAvailable)).join('')}
       </details>
     `);
   }
@@ -285,7 +316,11 @@ function renderResource(r: ResourceDetail): string {
   return parts.join('');
 }
 
-function renderViolation(v: ViolationDetail): string {
+function renderViolation(
+  v: ViolationDetail,
+  resourceName: string,
+  copilotAvailable: boolean
+): string {
   const badges: string[] = [];
   if (v.blockPullRequest) {
     badges.push(`<span class="badge blocking">Blocking</span>`);
@@ -350,6 +385,21 @@ function renderViolation(v: ViolationDetail): string {
         )}/mo</div>`
       : '';
 
+  let copilotBtn = '';
+  if (copilotAvailable) {
+    const promptParts = [
+      `Fix the following FinOps policy violation on resource "${resourceName}":`,
+      v.message,
+    ];
+    if (v.policyDetail?.additionalDetails) {
+      promptParts.push(v.policyDetail.additionalDetails);
+    }
+    const prompt = promptParts.join('\n\n');
+    copilotBtn = `<div class="copilot-fix"><button class="copilot-fix-btn" data-prompt="${escAttr(
+      prompt
+    )}">Fix with Copilot</button></div>`;
+  }
+
   return `
     <details class="violation">
       <summary>
@@ -359,6 +409,7 @@ function renderViolation(v: ViolationDetail): string {
       <div class="violation-message">${linkify(v.message)}</div>
       ${savings}
       ${details}
+      ${copilotBtn}
     </details>
   `;
 }
@@ -410,6 +461,15 @@ function esc(s: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function escAttr(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '&#10;');
 }
 
 function sentenceCase(s: string): string {

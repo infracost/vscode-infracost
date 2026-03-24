@@ -2,7 +2,7 @@
   "name": "infracost",
   "displayName": "Infracost",
   "description": "Cloud cost estimates for Terraform in your editor",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publisher": "Infracost",
   "license": "Apache-2.0",
   "icon": "infracost-logo.png",
@@ -67,6 +67,11 @@
           "type": "string",
           "default": "",
           "description": "Host and port for the debug UI server (e.g. \":7100\")."
+        },
+        "infracost.enableDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show FinOps and tag policy violations as inline diagnostics (squiggly lines and Problems panel)."
         },
         "infracost.runParamsCacheTTLSeconds": {
           "type": "number",

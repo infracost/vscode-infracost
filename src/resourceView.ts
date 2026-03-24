@@ -3,6 +3,10 @@ import { ResourceDetailsResult, renderResult, renderEmpty, renderLogin } from '.
 
 export { ResourceDetailsResult } from './resourceHtml';
 
+function isCopilotAvailable(): boolean {
+  return vscode.extensions.getExtension('GitHub.copilot-chat') !== undefined;
+}
+
 export class ResourceViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'infracost.resourceDetails';
 
@@ -20,11 +24,17 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
       if (msg.command === 'login') {
         vscode.commands.executeCommand('infracost.login');
       }
+      if (msg.command === 'fixWithCopilot') {
+        vscode.commands.executeCommand('workbench.action.chat.open', {
+          query: msg.prompt,
+          isPartialQuery: false,
+        });
+      }
     });
   }
 
   update(data: ResourceDetailsResult): void {
-    this.setHtml(renderResult(data));
+    this.setHtml(renderResult(data, isCopilotAvailable()));
   }
 
   showLogin(): void {

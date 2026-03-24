@@ -249,8 +249,14 @@ async function handleScanComplete() {
   if (!client) {
     return;
   }
-  const editor = vscode.window.activeTextEditor;
+
+  // Prefer the active editor, but fall back to any visible editor showing a
+  // supported file (e.g. when Copilot Chat has focus after a fix).
+  let editor = vscode.window.activeTextEditor;
   if (!editor || !isSupportedFile(editor.document.uri.fsPath)) {
+    editor = vscode.window.visibleTextEditors.find((e) => isSupportedFile(e.document.uri.fsPath));
+  }
+  if (!editor) {
     return;
   }
 
