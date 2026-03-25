@@ -56,14 +56,12 @@ export function activate(context: vscode.ExtensionContext) {
   extensionPath = context.extensionPath;
   client = createClient();
 
-  const debug = vscode.workspace.getConfiguration('infracost').get<boolean>('debug', false);
+  const trace = vscode.workspace.getConfiguration('infracost').get<string>('trace.server', 'off');
 
   client
     .start()
     .then(async () => {
-      if (!debug) {
-        await client?.setTrace(Trace.Off);
-      }
+      await client?.setTrace(Trace.fromString(trace));
       client?.onNotification('infracost/updateAvailable', handleUpdateAvailable);
       client?.onNotification('infracost/scanComplete', handleScanComplete);
       checkAuthStatus();
