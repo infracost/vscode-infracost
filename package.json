@@ -2,7 +2,7 @@
   "name": "infracost",
   "displayName": "Infracost",
   "description": "Cloud cost estimates for Terraform in your editor",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "publisher": "Infracost",
   "license": "Apache-2.0",
   "icon": "infracost-logo.png",
@@ -77,6 +77,12 @@
           "type": "number",
           "default": 300,
           "description": "How long (in seconds) to cache run parameters (org ID, tag policies) between API calls. Set to 0 to disable caching."
+        },
+        "infracost.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "description": "Trace communication between VS Code and the Infracost language server."
         }
       }
     },
