@@ -276,6 +276,15 @@ async function handleUpdateAvailable(params: {
   latestVersion: string;
   currentVersion: string;
 }) {
+  const semver = /^\d+\.\d+\.\d+$/;
+  if (
+    !semver.test(params.currentVersion) ||
+    !semver.test(params.latestVersion) ||
+    params.currentVersion === '0.0.0'
+  ) {
+    return;
+  }
+
   const choice = await vscode.window.showInformationMessage(
     `Infracost Language Server update available: v${params.currentVersion} → v${params.latestVersion}`,
     'Update'
