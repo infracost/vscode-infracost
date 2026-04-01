@@ -276,6 +276,10 @@ async function handleUpdateAvailable(params: {
   latestVersion: string;
   currentVersion: string;
 }) {
+  if (params.currentVersion === '0.0.0') {
+    return;
+  }
+
   const choice = await vscode.window.showInformationMessage(
     `Infracost Language Server update available: v${params.currentVersion} → v${params.latestVersion}`,
     'Update'
