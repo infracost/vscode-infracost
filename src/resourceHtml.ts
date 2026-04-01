@@ -446,9 +446,7 @@ function renderTagViolation(
         (t) =>
           `<div class="tag-list"><strong>${esc(t.key)}:</strong> <code>${esc(t.value)}</code>${
             t.message ? `<div class="tag-message">${esc(t.message)}</div>` : ''
-          }${
-            t.suggestion ? ` (suggestion: <code>${esc(t.suggestion)}</code>)` : ''
-          }${
+          }${t.suggestion ? ` (suggestion: <code>${esc(t.suggestion)}</code>)` : ''}${
             t.validValues && t.validValues.length > 0
               ? `<div class="tag-list">Valid values: ${t.validValues
                   .map((val) => `<code>${esc(val)}</code>`)
@@ -461,13 +459,9 @@ function renderTagViolation(
 
   let copilotBtn = '';
   if (copilotAvailable) {
-    const promptParts = [
-      `Fix the following tag policy violation on resource "${resourceName}":`,
-    ];
+    const promptParts = [`Fix the following tag policy violation on resource "${resourceName}":`];
     if (v.missingTags && v.missingTags.length > 0) {
-      promptParts.push(
-        v.missingTags.map((t) => `Tag "${t}" is required but missing.`).join('\n')
-      );
+      promptParts.push(v.missingTags.map((t) => `Tag "${t}" is required but missing.`).join('\n'));
     }
     if (v.invalidTags && v.invalidTags.length > 0) {
       for (const t of v.invalidTags) {
