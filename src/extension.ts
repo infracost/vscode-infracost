@@ -276,7 +276,12 @@ async function handleUpdateAvailable(params: {
   latestVersion: string;
   currentVersion: string;
 }) {
-  if (params.currentVersion === '0.0.0') {
+  const semver = /^\d+\.\d+\.\d+$/;
+  if (
+    !semver.test(params.currentVersion) ||
+    !semver.test(params.latestVersion) ||
+    params.currentVersion === '0.0.0'
+  ) {
     return;
   }
 

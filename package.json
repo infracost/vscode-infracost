@@ -2,7 +2,7 @@
   "name": "infracost",
   "displayName": "Infracost",
   "description": "Cloud cost estimates for Terraform in your editor",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "publisher": "Infracost",
   "license": "Apache-2.0",
   "icon": "infracost-logo.png",
@@ -80,7 +80,11 @@
         },
         "infracost.trace.server": {
           "type": "string",
-          "enum": ["off", "messages", "verbose"],
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
           "default": "off",
           "description": "Trace communication between VS Code and the Infracost language server."
         }

@@ -31,6 +31,7 @@ interface TagViolationDetail {
   policyName: string;
   blockPR: boolean;
   message: string;
+  policyMessage?: string;
   missingTags?: string[];
   invalidTags?: {
     key: string;
@@ -187,6 +188,15 @@ export function renderPage(body: string): string {
     font-size: 0.9em;
     line-height: 1.5;
   }
+  .tag-message {
+    margin-top: 2px;
+    font-size: 0.85em;
+    color: var(--vscode-descriptionForeground);
+  }
+  .policy-message {
+    margin-top: 4px;
+    font-size: 0.9em;
+  }
   code {
     background: var(--vscode-textCodeBlock-background);
     padding: 1px 4px;
@@ -308,7 +318,7 @@ function renderResource(r: ResourceDetail, copilotAvailable: boolean): string {
     parts.push(`
       <details class="section" open>
         <summary>Tag Issues (${r.tagViolations.length})</summary>
-        ${r.tagViolations.map((v) => renderTagViolation(v)).join('')}
+        ${r.tagViolations.map((v) => renderTagViolation(v, r.name, copilotAvailable)).join('')}
       </details>
     `);
   }
@@ -414,7 +424,11 @@ function renderViolation(
   `;
 }
 
-function renderTagViolation(v: TagViolationDetail): string {
+function renderTagViolation(
+  v: TagViolationDetail,
+  resourceName: string,
+  copilotAvailable: boolean
+): string {
   const badges: string[] = [];
   if (v.blockPR) {
     badges.push(`<span class="badge blocking">Blocking</span>`);
@@ -431,6 +445,8 @@ function renderTagViolation(v: TagViolationDetail): string {
       .map(
         (t) =>
           `<div class="tag-list"><strong>${esc(t.key)}:</strong> <code>${esc(t.value)}</code>${
+            t.message ? `<div class="tag-message">${esc(t.message)}</div>` : ''
+          }${
             t.suggestion ? ` (suggestion: <code>${esc(t.suggestion)}</code>)` : ''
           }${
             t.validValues && t.validValues.length > 0
@@ -443,14 +459,44 @@ function renderTagViolation(v: TagViolationDetail): string {
       .join('');
   }
 
+  let copilotBtn = '';
+  if (copilotAvailable) {
+    const promptParts = [
+      `Fix the following tag policy violation on resource "${resourceName}":`,
+    ];
+    if (v.missingTags && v.missingTags.length > 0) {
+      promptParts.push(
+        v.missingTags.map((t) => `Tag "${t}" is required but missing.`).join('\n')
+      );
+    }
+    if (v.invalidTags && v.invalidTags.length > 0) {
+      for (const t of v.invalidTags) {
+        let line = `Tag "${t.key}" has an invalid value "${t.value}".`;
+        if (t.validValues && t.validValues.length > 0) {
+          line += ` Valid values: ${t.validValues.join(', ')}.`;
+        }
+        promptParts.push(line);
+      }
+    }
+    if (v.policyMessage) {
+      promptParts.push(v.policyMessage);
+    }
+    const prompt = promptParts.join('\n\n');
+    copilotBtn = `<div class="copilot-fix"><button class="copilot-fix-btn" data-prompt="${escAttr(
+      prompt
+    )}">Fix with Copilot</button></div>`;
+  }
+
   return `
     <div class="violation">
       <div class="violation-header">
         <strong>${esc(v.policyName)}</strong>
         <div class="badges">${badges.join('')}</div>
       </div>
+      ${v.policyMessage ? `<div class="policy-message">${esc(v.policyMessage)}</div>` : ''}
       <div class="violation-message">${linkify(v.message)}</div>
       ${tagList}
+      ${copilotBtn}
     </div>
   `;
 }
