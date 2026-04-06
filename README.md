@@ -6,6 +6,20 @@
 
 Infracost's VS Code extension shows you cost estimates for Terraform right in your editor! It also surfaces FinOps policies and tagging issues so you can catch problems before they reach production.
 
+## Table of contents
+
+- [Features](#features)
+  - [Inline cost estimates](#inline-cost-estimates)
+  - [Resource details sidebar](#resource-details-sidebar)
+  - [FinOps policies and tag issues](#finops-policies-and-tag-issues)
+  - [CloudFormation support](#cloudformation-support)
+- [Get started](#get-started)
+- [Requirements](#requirements)
+- [Configuration](#configuration)
+- [Commands](#commands)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+
 ## Features
 
 ## Cost estimates
@@ -40,7 +54,21 @@ In addition to Terraform (`.tf`) files, the extension supports CloudFormation te
 
 ## Get started
 
+> [!NOTE]
+> **Prerequisites:** Make sure you have VS Code **v1.75.0** or above and an [Infracost account](https://www.infracost.io). See [Requirements](#requirements) for details.
+
 ### 1. Install the extension
+
+Open VS Code and go to the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`). Search for **Infracost**, select the extension published by Infracost, and click **Install**.
+
+Alternatively, use the Quick Open command:
+
+```
+ext install Infracost.infracost
+```
+
+<details>
+<summary>Installing a pre-release version</summary>
 
 Download the `.vsix` file for your platform from the [latest pre-release](https://github.com/infracost/vscode-infracost/releases). Then install it manually:
 
@@ -49,6 +77,11 @@ code --install-extension infracost-0.2.35-darwin-arm64.vsix
 ```
 
 Or in VS Code: open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`), run **Extensions: Install from VSIX...**, and select the downloaded file.
+
+</details>
+
+> [!TIP]
+> Using a different IDE? See the [official installation docs](https://www.infracost.io/docs/ai_editor_plugins/ide_extensions/#-visual-studio-code) for instructions on other supported editors.
 
 ### 2. Login to Infracost
 
