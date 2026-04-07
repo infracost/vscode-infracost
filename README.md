@@ -6,6 +6,20 @@
 
 Infracost's VS Code extension shows you cost estimates for Terraform right in your editor! It also surfaces FinOps policies and tagging issues so you can catch problems before they reach production.
 
+## Table of contents
+
+- [Features](#features)
+  - [Inline cost estimates](#inline-cost-estimates)
+  - [Resource details sidebar](#resource-details-sidebar)
+  - [FinOps policies and tag issues](#finops-policies-and-tag-issues)
+  - [CloudFormation support](#cloudformation-support)
+- [Get started](#get-started)
+- [Requirements](#requirements)
+- [Configuration](#configuration)
+- [Commands](#commands)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+
 ## Features
 
 ## Cost estimates
@@ -40,7 +54,21 @@ In addition to Terraform (`.tf`) files, the extension supports CloudFormation te
 
 ## Get started
 
+> [!NOTE]
+> **Prerequisites:** Make sure you have VS Code **v1.75.0** or above and an [Infracost account](https://www.infracost.io). See [Requirements](#requirements) for details.
+
 ### 1. Install the extension
+
+Open VS Code and go to the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`). Search for **Infracost**, select the extension published by Infracost, and click **Install**.
+
+Alternatively, use the Quick Open command:
+
+```
+ext install Infracost.infracost
+```
+
+<details>
+<summary>Installing a pre-release version</summary>
 
 Download the `.vsix` file for your platform from the [latest pre-release](https://github.com/infracost/vscode-infracost/releases). Then install it manually:
 
@@ -49,6 +77,11 @@ code --install-extension infracost-0.2.35-darwin-arm64.vsix
 ```
 
 Or in VS Code: open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`), run **Extensions: Install from VSIX...**, and select the downloaded file.
+
+</details>
+
+> [!TIP]
+> Using a different IDE? See the [official installation docs](https://www.infracost.io/docs/ai_editor_plugins/ide_extensions/#-visual-studio-code) for instructions on other supported editors.
 
 ### 2. Login to Infracost
 
@@ -90,14 +123,16 @@ Open a workspace containing Terraform files. The extension will start the langua
 1. Open the Output panel (View -> Output).
 2. Select **Infracost** from the dropdown to see language server logs.
 
-If you're having issues, please [raise an issue](https://github.com/infracost/vscode-infracost/issues) with as much log information as you can, along with your OS and VS Code version.
+If you're having issues, please start a thread in [GitHub Discussions](https://github.com/infracost/infracost/discussions) with as much log information as you can, along with your OS and VS Code version.
 
 ## Contributing
+
+We welcome contributions! Please start by opening a thread in [GitHub Discussions](https://github.com/infracost/infracost/discussions) to discuss your idea before submitting a PR.
+
+To set up a local development environment:
 
 1. Clone the repo.
 2. `npm install` to install dependencies.
 3. Open the repo in VS Code.
 4. Press F5 to launch the extension in a Development Host window.
 5. Open a Terraform project to see cost estimates above resource blocks.
-
-Open a PR when you're ready and we'll review it.
