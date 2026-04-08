@@ -57,6 +57,19 @@ export interface ResourceDetailsResult {
   needsLogin?: boolean;
 }
 
+export interface StatusInfo {
+  version: string;
+  workspaceRoot: string;
+  loggedIn: boolean;
+  scanning: boolean;
+  projectCount: number;
+  projectNames: string[];
+  resourceCount: number;
+  violationCount: number;
+  tagIssueCount: number;
+  configFound: boolean;
+}
+
 export function renderPage(body: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -71,6 +84,9 @@ export function renderPage(body: string): string {
     color: var(--vscode-foreground);
     padding: 8px;
     margin: 0;
+    position: relative;
+    min-height: 100vh;
+    box-sizing: border-box;
   }
   .state {
     text-align: center;
@@ -203,6 +219,75 @@ export function renderPage(body: string): string {
     border-radius: 3px;
     font-family: var(--vscode-editor-font-family);
   }
+  .empty-links {
+    position: absolute;
+    bottom: 16px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.9em;
+  }
+  .empty-links a {
+    color: var(--vscode-textLink-foreground);
+    text-decoration: none;
+  }
+  .empty-links a:hover { text-decoration: underline; }
+  .login-status {
+    margin-top: 4px;
+    font-size: 0.9em;
+  }
+  .issue-list {
+    list-style: none;
+    padding: 0;
+    margin: 6px 0 0 0;
+  }
+  .issue-list li {
+    padding: 4px 0;
+    border-bottom: 1px solid var(--vscode-widget-border);
+  }
+  .issue-list li:last-child { border-bottom: none; }
+  .issue-list a {
+    color: var(--vscode-foreground);
+    text-decoration: none;
+    display: block;
+    font-size: 0.9em;
+    line-height: 1.4;
+  }
+  .issue-list a:hover { color: var(--vscode-textLink-foreground); }
+  .resource-link-name {
+    word-break: break-all;
+  }
+  .back-nav {
+    margin-bottom: 8px;
+  }
+  .back-nav a {
+    color: var(--vscode-textLink-foreground);
+    text-decoration: none;
+    font-size: 0.9em;
+  }
+  .back-nav a:hover { text-decoration: underline; }
+  .status-table { font-size: 0.9em; }
+  .status-table td:first-child {
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
+    padding-right: 12px;
+  }
+  .status-table td { border-bottom: none; }
+  .project-list {
+    list-style: none;
+    padding: 0;
+    margin: 4px 0 0 0;
+    font-size: 0.9em;
+  }
+  .project-list li { padding: 2px 0; }
+  .status-indicators {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.9em;
+  }
   .copilot-fix {
     display: flex;
     justify-content: flex-end;
@@ -241,8 +326,51 @@ export function renderPage(body: string): string {
 </html>`;
 }
 
-export function renderEmpty(): string {
-  return renderPage(`<div class="state">No resource selected</div>`);
+export interface FileSummaryResource {
+  name: string;
+  line: number;
+  monthlyCost: string;
+  policyIssues: number;
+  tagIssues: number;
+}
+
+export function renderEmpty(loggedIn?: boolean, resources?: FileSummaryResource[]): string {
+  let statusText = '';
+  if (loggedIn === true) {
+    statusText = '<span style="color:var(--vscode-charts-green);">● Logged in</span>';
+  } else if (loggedIn === false) {
+    statusText = '<span style="color:var(--vscode-descriptionForeground);">○ Not logged in</span>';
+  }
+
+  let resourcesHtml = '';
+  if (resources && resources.length > 0) {
+    const items = resources
+      .map((r) => {
+        const badges: string[] = [];
+        badges.push(`<span class="badge">${esc(r.monthlyCost)}/mo</span>`);
+        if (r.policyIssues > 0) {
+          badges.push(`<span class="badge high">${r.policyIssues} policy</span>`);
+        }
+        if (r.tagIssues > 0) {
+          badges.push(`<span class="badge medium">${r.tagIssues} tag</span>`);
+        }
+        return `<li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'revealResource',uri:'',line:${
+          r.line
+        }}}));return false;"><div class="resource-link-name">${esc(
+          r.name
+        )}</div><div class="badges">${badges.join('')}</div></a></li>`;
+      })
+      .join('');
+    resourcesHtml = `<div class="section"><strong>Resources</strong><ul class="issue-list">${items}</ul></div>`;
+  }
+
+  return renderPage(`${resourcesHtml || '<div class="state">No resource selected</div>'}
+<div class="empty-links">
+  <a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'troubleshoot'}}));return false;">Troubleshooting</a>
+  <a href="https://infracost.io/community-chat">Join the Slack</a>
+  <a href="https://github.com/infracost/vscode-infracost/discussions">Raise an issue</a>
+  ${statusText ? `<div class="login-status">${statusText}</div>` : ''}
+</div>`);
 }
 
 export function renderScanning(): string {
@@ -253,10 +381,70 @@ export function renderLogin(): string {
   return renderPage(`<div class="state">
   <p>Login to Infracost Cloud to see Costs, FinOps policies, and Tagging issues.</p>
   <button class="login-btn" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'login'}}))">Login to Infracost</button>
+</div>
+<div class="empty-links">
+  <a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'troubleshoot'}}));return false;">Troubleshooting</a>
+  <a href="https://infracost.io/community-chat">Join the Slack</a>
+  <a href="https://github.com/infracost/vscode-infracost/discussions">Raise an issue</a>
 </div>`);
 }
 
-export function renderResult(data: ResourceDetailsResult, copilotAvailable = false): string {
+export function renderTroubleshooting(status: StatusInfo): string {
+  const serverStatus = status.version
+    ? '<span style="color:var(--vscode-charts-green);">● Server running</span>'
+    : '<span style="color:var(--vscode-editorError-foreground);">● Server not running</span>';
+
+  const loginStatus = status.loggedIn
+    ? '<span style="color:var(--vscode-charts-green);">● Logged in</span>'
+    : '<span style="color:var(--vscode-descriptionForeground);">○ Not logged in</span> — <a href="#" onclick="document.dispatchEvent(new CustomEvent(\'infracost\',{detail:{command:\'login\'}}));return false;">Login</a>';
+
+  const configStatus = status.configFound
+    ? `Found (${status.projectCount} project${status.projectCount !== 1 ? 's' : ''})`
+    : '<span style="color:var(--vscode-editorWarning-foreground);">Not found</span>';
+
+  const projects =
+    status.projectNames && status.projectNames.length > 0
+      ? status.projectNames.map((n) => `<li>${esc(n)}</li>`).join('')
+      : '<li style="color:var(--vscode-descriptionForeground);">None</li>';
+
+  return renderPage(`
+<div class="back-nav"><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'back'}}));return false;">&larr; Back</a></div>
+<div class="section status-indicators">
+  <div>${serverStatus}</div>
+  <div>${loginStatus}</div>
+</div>
+<div class="section">
+  <strong>Details</strong>
+  <table class="status-table">
+    <tr><td>Server version</td><td>${esc(status.version || 'N/A')}</td></tr>
+    <tr><td>Workspace</td><td>${esc(status.workspaceRoot || 'Not set')}</td></tr>
+    <tr><td>Scan</td><td>${esc(status.scanning ? 'In progress' : 'Idle')}</td></tr>
+    <tr><td>Config</td><td>${configStatus}</td></tr>
+    <tr><td>Resources</td><td>${status.resourceCount}</td></tr>
+    <tr><td>Policy issues</td><td>${status.violationCount}</td></tr>
+    <tr><td>Tag issues</td><td>${status.tagIssueCount}</td></tr>
+  </table>
+</div>
+<div class="section">
+  <strong>Projects</strong>
+  <ul class="project-list">${projects}</ul>
+</div>
+<div class="section">
+  <strong>Actions</strong>
+  <ul class="project-list">
+    <li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'restartLsp'}}));return false;">Restart language server</a></li>
+    <li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'viewLogs'}}));return false;">View logs</a></li>
+    <li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'generateBundle'}}));return false;">Generate support bundle</a></li>
+  </ul>
+</div>
+`);
+}
+
+export function renderResult(
+  data: ResourceDetailsResult,
+  copilotAvailable: boolean,
+  resources?: FileSummaryResource[]
+): string {
   if (data.scanning) {
     return renderScanning();
   }
@@ -264,13 +452,17 @@ export function renderResult(data: ResourceDetailsResult, copilotAvailable = fal
     return renderLogin();
   }
   if (!data.resource) {
-    return renderEmpty();
+    return renderEmpty(!data.needsLogin, resources);
   }
   return renderPage(renderResource(data.resource, copilotAvailable));
 }
 
 function renderResource(r: ResourceDetail, copilotAvailable: boolean): string {
   const parts: string[] = [];
+
+  parts.push(
+    `<div class="back-nav"><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'back'}}));return false;">&larr; Back</a></div>`
+  );
 
   parts.push(`
     <div class="header">
@@ -466,6 +658,9 @@ function renderTagViolation(
     if (v.invalidTags && v.invalidTags.length > 0) {
       for (const t of v.invalidTags) {
         let line = `Tag "${t.key}" has an invalid value "${t.value}".`;
+        if (t.message) {
+          line += ` ${t.message}`;
+        }
         if (t.validValues && t.validValues.length > 0) {
           line += ` Valid values: ${t.validValues.join(', ')}.`;
         }

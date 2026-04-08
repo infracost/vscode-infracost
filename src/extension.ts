@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
@@ -8,6 +10,7 @@ import {
 } from 'vscode-languageclient/node';
 import { Trace } from 'vscode-languageserver-protocol';
 import { ResourceViewProvider, ResourceDetailsResult } from './resourceView';
+import { StatusInfo } from './resourceHtml';
 
 let client: LanguageClient | undefined;
 let resourceViewProvider: ResourceViewProvider;
@@ -71,6 +74,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
   resourceViewProvider = new ResourceViewProvider();
+  resourceViewProvider.setClient(client);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(ResourceViewProvider.viewType, resourceViewProvider)
   );
@@ -100,6 +104,14 @@ export function activate(context: vscode.ExtensionContext) {
         }
       );
   }
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (!editor) {
+        resourceViewProvider.update({ scanning: false });
+      }
+    })
+  );
 
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -143,12 +155,24 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
         try {
+          // Capture editor before focus shifts to the webview panel.
+          const editor = vscode.window.activeTextEditor;
+
           const result = await client.sendRequest<ResourceDetailsResult>(
             'infracost/resourceDetails',
             { uri, line }
           );
           resourceViewProvider.update(result);
-          vscode.commands.executeCommand(`${ResourceViewProvider.viewType}.focus`);
+
+          // Scroll the editor to the resource line.
+          if (editor && editor.document.uri.toString() === uri) {
+            const pos = new vscode.Position(line, 0);
+            editor.selection = new vscode.Selection(pos, pos);
+            editor.revealRange(
+              new vscode.Range(pos, pos),
+              vscode.TextEditorRevealType.InCenterIfOutsideViewport
+            );
+          }
         } catch {
           // Ignore errors
         }
@@ -175,8 +199,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (choice === 'Open Browser') {
           await vscode.env.openExternal(vscode.Uri.parse(result.verificationUriComplete));
         }
-        // Clear the login view — the server will show "Scanning..." once auth completes.
-        resourceViewProvider.update({ scanning: false });
+        // Keep showing login — scanComplete will refresh the view once auth succeeds.
       } catch (e) {
         vscode.window.showErrorMessage(`Infracost login failed: ${e}`);
       }
@@ -184,20 +207,71 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('infracost.restartLsp', async () => {
-      if (client) {
-        try {
-          await client.restart();
-        } catch {
-          // If restart fails, dispose and create a fresh client
-          await client.dispose();
-          client = createClient();
-          await client.start();
-        }
-      } else {
-        client = createClient();
-        await client.start();
+    vscode.commands.registerCommand('infracost.showOutputChannel', () => {
+      client?.outputChannel.show(true);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('infracost.generateBundle', async () => {
+      try {
+        const status = client
+          ? await client.sendRequest<StatusInfo>('infracost/status')
+          : { error: 'Language server not running' };
+
+        const config = vscode.workspace.getConfiguration('infracost');
+        const lspPath =
+          config.get<string>('serverPath') || path.join(extensionPath, 'bin', 'infracost-ls');
+
+        const bundle = {
+          timestamp: new Date().toISOString(),
+          vscodeVersion: vscode.version,
+          extensionVersion:
+            vscode.extensions.getExtension('Infracost.infracost')?.packageJSON?.version ??
+            'unknown',
+          platform: process.platform,
+          arch: process.arch,
+          lspPath,
+          status,
+        };
+
+        const bundlePath = path.join(os.tmpdir(), `infracost-support-${Date.now()}.json`);
+        fs.writeFileSync(bundlePath, JSON.stringify(bundle, null, 2));
+
+        const doc = await vscode.workspace.openTextDocument(bundlePath);
+        await vscode.window.showTextDocument(doc);
+        vscode.window.showInformationMessage(`Support bundle saved to ${bundlePath}`);
+      } catch (e) {
+        vscode.window.showErrorMessage(`Failed to generate support bundle: ${e}`);
       }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('infracost.restartLsp', async () => {
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Restarting Infracost Language Server...',
+        },
+        async () => {
+          if (client) {
+            try {
+              await client.restart();
+            } catch {
+              // If restart fails, dispose and create a fresh client
+              await client.dispose();
+              client = createClient();
+              resourceViewProvider.setClient(client);
+              await client.start();
+            }
+          } else {
+            client = createClient();
+            resourceViewProvider.setClient(client);
+            await client.start();
+          }
+        }
+      );
     })
   );
 }
@@ -276,6 +350,10 @@ async function handleUpdateAvailable(params: {
   latestVersion: string;
   currentVersion: string;
 }) {
+  if (!params.updateAvailable) {
+    return;
+  }
+
   const semver = /^\d+\.\d+\.\d+$/;
   if (
     !semver.test(params.currentVersion) ||
