@@ -18,7 +18,8 @@ let extensionPath: string;
 
 function createClient(): LanguageClient {
   const config = vscode.workspace.getConfiguration('infracost');
-  const defaultPath = path.join(extensionPath, 'bin', 'infracost-ls');
+  const binaryPath = os.platform() === 'win32' ? 'infracost-ls.exe' : 'infracost-ls';
+  const defaultPath = path.join(extensionPath, 'bin', binaryPath);
   const serverPath = config.get<string>('serverPath') || defaultPath;
 
   const serverEnv: Record<string, string> = { ...process.env } as Record<string, string>;
@@ -67,9 +68,14 @@ export function activate(context: vscode.ExtensionContext) {
       await client?.setTrace(Trace.fromString(trace));
       client?.onNotification('infracost/updateAvailable', handleUpdateAvailable);
       client?.onNotification('infracost/scanComplete', handleScanComplete);
+      client?.onNotification('infracost/loginComplete', () => {
+        pendingLogin = undefined;
+        resourceViewProvider.update({ scanning: true });
+      });
       checkAuthStatus();
     })
     .catch((error) => {
+      client = undefined;
       vscode.window.showErrorMessage(`Failed to start Infracost language server: ${error}`);
     });
 
@@ -180,11 +186,23 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
+  let pendingLogin: { uri: string; userCode: string } | undefined;
+
   context.subscriptions.push(
     vscode.commands.registerCommand('infracost.login', async () => {
       if (!client) {
+        vscode.window.showErrorMessage(
+          'Infracost language server is not running. Try restarting it first.'
+        );
         return;
       }
+
+      if (pendingLogin) {
+        resourceViewProvider.showLoginVerifying(pendingLogin.userCode);
+        await vscode.env.openExternal(vscode.Uri.parse(pendingLogin.uri));
+        return;
+      }
+
       try {
         const result = await client.sendRequest<{
           verificationUri: string;
@@ -192,15 +210,12 @@ export function activate(context: vscode.ExtensionContext) {
           userCode: string;
         }>('infracost/login');
 
-        const choice = await vscode.window.showInformationMessage(
-          `Verify the code in your browser matches: ${result.userCode}`,
-          'Open Browser'
-        );
-        if (choice === 'Open Browser') {
-          await vscode.env.openExternal(vscode.Uri.parse(result.verificationUriComplete));
-        }
+        pendingLogin = { uri: result.verificationUriComplete, userCode: result.userCode };
+        resourceViewProvider.showLoginVerifying(result.userCode);
+        await vscode.env.openExternal(vscode.Uri.parse(result.verificationUriComplete));
         // Keep showing login — scanComplete will refresh the view once auth succeeds.
       } catch (e) {
+        pendingLogin = undefined;
         vscode.window.showErrorMessage(`Infracost login failed: ${e}`);
       }
     })
@@ -257,19 +272,15 @@ export function activate(context: vscode.ExtensionContext) {
         async () => {
           if (client) {
             try {
-              await client.restart();
-            } catch {
-              // If restart fails, dispose and create a fresh client
               await client.dispose();
-              client = createClient();
-              resourceViewProvider.setClient(client);
-              await client.start();
+            } catch {
+              // Ignore dispose errors
             }
-          } else {
-            client = createClient();
-            resourceViewProvider.setClient(client);
-            await client.start();
           }
+          pendingLogin = undefined;
+          client = createClient();
+          resourceViewProvider.setClient(client);
+          await client.start();
         }
       );
     })
@@ -329,6 +340,7 @@ async function handleScanComplete() {
     editor = vscode.window.visibleTextEditors.find((e) => isSupportedFile(e.document.uri.fsPath));
   }
   if (!editor) {
+    resourceViewProvider.update({ scanning: false });
     return;
   }
 

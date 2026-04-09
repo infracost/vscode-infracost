@@ -7,6 +7,7 @@ import {
   renderResult,
   renderEmpty,
   renderLogin,
+  renderLoginVerifying,
   renderTroubleshooting,
 } from './resourceHtml';
 
@@ -83,6 +84,10 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
   showLogin(): void {
     this.lastData = undefined;
     this.setHtml(renderLogin());
+  }
+
+  showLoginVerifying(userCode: string): void {
+    this.setHtml(renderLoginVerifying(userCode));
   }
 
   refreshEmpty(): void {

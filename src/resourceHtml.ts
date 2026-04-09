@@ -389,6 +389,21 @@ export function renderLogin(): string {
 </div>`);
 }
 
+export function renderLoginVerifying(userCode: string): string {
+  return renderPage(`<div class="state">
+  <p>Verify the code in your browser matches:</p>
+  <div style="font-size:1.4em;font-weight:bold;letter-spacing:2px;margin:12px 0;">${esc(
+    userCode
+  )}</div>
+  <p style="color:var(--vscode-descriptionForeground);margin-top:8px;">Waiting for login to complete, this may take a few seconds…</p>
+</div>
+<div class="empty-links">
+  <a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'troubleshoot'}}));return false;">Troubleshooting</a>
+  <a href="https://infracost.io/community-chat">Join the Slack</a>
+  <a href="https://github.com/infracost/vscode-infracost/discussions">Raise an issue</a>
+</div>`);
+}
+
 export function renderTroubleshooting(status: StatusInfo): string {
   const serverStatus = status.version
     ? '<span style="color:var(--vscode-charts-green);">● Server running</span>'
