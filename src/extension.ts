@@ -169,6 +169,7 @@ export function activate(context: vscode.ExtensionContext) {
             { uri, line }
           );
           resourceViewProvider.update(result);
+          vscode.commands.executeCommand(`${ResourceViewProvider.viewType}.focus`);
 
           // Scroll the editor to the resource line.
           if (editor && editor.document.uri.toString() === uri) {
