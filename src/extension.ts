@@ -15,12 +15,20 @@ import { StatusInfo } from './resourceHtml';
 let client: LanguageClient | undefined;
 let resourceViewProvider: ResourceViewProvider;
 let extensionPath: string;
+let pendingLogin: { uri: string; userCode: string } | undefined;
+
+function resolveServerPath(extensionPath: string): string {
+  const binaryName = os.platform() === 'win32' ? 'infracost-ls.exe' : 'infracost-ls';
+  const bundledPath = path.join(extensionPath, 'bin', binaryName);
+  if (fs.existsSync(bundledPath)) {
+    return bundledPath;
+  }
+  return binaryName;
+}
 
 function createClient(): LanguageClient {
   const config = vscode.workspace.getConfiguration('infracost');
-  const binaryPath = os.platform() === 'win32' ? 'infracost-ls.exe' : 'infracost-ls';
-  const defaultPath = path.join(extensionPath, 'bin', binaryPath);
-  const serverPath = config.get<string>('serverPath') || defaultPath;
+  const serverPath = config.get<string>('serverPath') || resolveServerPath(extensionPath);
 
   const serverEnv: Record<string, string> = { ...process.env } as Record<string, string>;
   const debug = config.get<boolean>('debug', false);
@@ -65,14 +73,9 @@ export function activate(context: vscode.ExtensionContext) {
   client
     .start()
     .then(async () => {
-      await client?.setTrace(Trace.fromString(trace));
-      client?.onNotification('infracost/updateAvailable', handleUpdateAvailable);
-      client?.onNotification('infracost/scanComplete', handleScanComplete);
-      client?.onNotification('infracost/loginComplete', () => {
-        pendingLogin = undefined;
-        resourceViewProvider.update({ scanning: true });
-      });
-      checkAuthStatus();
+      if (client) {
+        await setupClient(client);
+      }
     })
     .catch((error) => {
       client = undefined;
@@ -187,8 +190,6 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  let pendingLogin: { uri: string; userCode: string } | undefined;
-
   context.subscriptions.push(
     vscode.commands.registerCommand('infracost.login', async () => {
       if (!client) {
@@ -236,8 +237,7 @@ export function activate(context: vscode.ExtensionContext) {
           : { error: 'Language server not running' };
 
         const config = vscode.workspace.getConfiguration('infracost');
-        const lspPath =
-          config.get<string>('serverPath') || path.join(extensionPath, 'bin', 'infracost-ls');
+        const lspPath = config.get<string>('serverPath') || resolveServerPath(extensionPath);
 
         const bundle = {
           timestamp: new Date().toISOString(),
@@ -264,6 +264,23 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand('infracost.restartClient', async () => {
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Restarting Infracost client...',
+        },
+        async () => {
+          if (client) {
+            await client.restart();
+            await setupClient(client);
+          }
+        }
+      );
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand('infracost.restartLsp', async () => {
       await vscode.window.withProgress(
         {
@@ -282,6 +299,7 @@ export function activate(context: vscode.ExtensionContext) {
           client = createClient();
           resourceViewProvider.setClient(client);
           await client.start();
+          await setupClient(client);
         }
       );
     })
@@ -299,6 +317,18 @@ function isSupportedFile(fsPath: string): boolean {
     return cfnPatterns.some((p) => base.includes(p));
   }
   return false;
+}
+
+async function setupClient(c: LanguageClient): Promise<void> {
+  const trace = vscode.workspace.getConfiguration('infracost').get<string>('trace.server', 'off');
+  await c.setTrace(Trace.fromString(trace));
+  c.onNotification('infracost/updateAvailable', handleUpdateAvailable);
+  c.onNotification('infracost/scanComplete', handleScanComplete);
+  c.onNotification('infracost/loginComplete', () => {
+    pendingLogin = undefined;
+    resourceViewProvider.update({ scanning: true });
+  });
+  await checkAuthStatus();
 }
 
 async function checkAuthStatus() {

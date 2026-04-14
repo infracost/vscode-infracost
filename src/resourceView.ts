@@ -52,6 +52,9 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
       if (msg.command === 'troubleshoot') {
         this.showTroubleshooting();
       }
+      if (msg.command === 'restartClient') {
+        vscode.commands.executeCommand('infracost.restartClient');
+      }
       if (msg.command === 'restartLsp') {
         vscode.commands.executeCommand('infracost.restartLsp');
       }

@@ -447,6 +447,7 @@ export function renderTroubleshooting(status: StatusInfo): string {
 <div class="section">
   <strong>Actions</strong>
   <ul class="project-list">
+    <li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'restartClient'}}));return false;">Restart client</a></li>
     <li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'restartLsp'}}));return false;">Restart language server</a></li>
     <li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'viewLogs'}}));return false;">View logs</a></li>
     <li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'generateBundle'}}));return false;">Generate support bundle</a></li>
