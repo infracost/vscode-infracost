@@ -68,8 +68,6 @@ export function activate(context: vscode.ExtensionContext) {
   extensionPath = context.extensionPath;
   client = createClient();
 
-  const trace = vscode.workspace.getConfiguration('infracost').get<string>('trace.server', 'off');
-
   client
     .start()
     .then(async () => {
