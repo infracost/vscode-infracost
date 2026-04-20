@@ -1,4 +1,4 @@
-// Shared HTML rendering for resource details, used by both the sidebar view and the webview panel.
+// Shared HTML rendering for the resource details sidebar webview.
 
 interface CostComponentDetail {
   name: string;
@@ -57,6 +57,14 @@ export interface ResourceDetailsResult {
   needsLogin?: boolean;
 }
 
+export interface GuardrailStatus {
+  name: string;
+  message: string;
+  blockPr: boolean;
+  totalMonthlyCost?: string;
+  threshold?: string;
+}
+
 export interface StatusInfo {
   version: string;
   workspaceRoot: string;
@@ -68,16 +76,47 @@ export interface StatusInfo {
   violationCount: number;
   tagIssueCount: number;
   configFound: boolean;
+  triggeredGuardrails?: GuardrailStatus[];
 }
 
-export function renderPage(body: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
-<style>
+export interface OrgEntry {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface OrgInfo {
+  organizations: OrgEntry[];
+  selectedOrgId: string;
+}
+
+export interface WorkspaceSummaryResource {
+  name: string;
+  line: number;
+  monthlyCost?: string;
+  policyIssues: number;
+  tagIssues: number;
+}
+
+export interface WorkspaceSummaryFile {
+  path: string;
+  uri: string;
+  resources: WorkspaceSummaryResource[];
+}
+
+export interface WorkspaceSummaryResult {
+  files: WorkspaceSummaryFile[];
+}
+
+export interface RenderOptions {
+  codiconUri?: string;
+  cspSource?: string;
+  fileIconUris?: Record<string, string>;
+  orgInfo?: OrgInfo;
+  guardrails?: GuardrailStatus[];
+}
+
+const STYLES = `
   body {
     font-family: var(--vscode-font-family);
     font-size: var(--vscode-font-size);
@@ -94,9 +133,6 @@ export function renderPage(body: string): string {
     color: var(--vscode-descriptionForeground);
   }
   .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
     margin-bottom: 12px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--vscode-widget-border);
@@ -106,19 +142,35 @@ export function renderPage(body: string): string {
     word-break: break-all;
   }
   .resource-cost {
-    font-weight: bold;
-    white-space: nowrap;
-    margin-left: 8px;
+    font-weight: normal;
     color: var(--vscode-charts-green);
+    margin-left: auto;
   }
   .section {
     margin-bottom: 12px;
   }
+  details > summary { list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::before {
+    content: '[+]';
+    display: inline-block;
+    width: 2em;
+    text-align: center;
+    margin-right: 4px;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 0.75em;
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+  details[open] > summary::before { content: '[-]'; }
   .section summary {
     cursor: pointer;
     font-weight: bold;
     padding: 4px 0;
     user-select: none;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
   }
   table {
     width: 100%;
@@ -133,28 +185,29 @@ export function renderPage(body: string): string {
   }
   .num { text-align: right; }
   .violation {
-    padding: 8px;
+    padding: 1px 8px;
     margin: 6px 0;
-    border-radius: 4px;
-    background: var(--vscode-editor-inactiveSelectionBackground);
+    border-left: 3px solid var(--vscode-widget-border);
   }
   .violation > summary {
     cursor: pointer;
-    list-style: revert;
+    padding-bottom: 6px;
+    font-weight: bold;
     user-select: none;
-  }
-  .violation > summary .badges {
     display: flex;
-    gap: 4px;
+    align-items: center;
+    gap: 6px;
     flex-wrap: wrap;
-    margin-top: 4px;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
   .violation-message {
-    margin-top: 4px;
     color: var(--vscode-foreground);
     line-height: 1.5;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
-  .badges { display: flex; gap: 4px; flex-wrap: wrap; }
+  .badges { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
   .badge {
     display: inline-block;
     padding: 1px 6px;
@@ -162,14 +215,12 @@ export function renderPage(body: string): string {
     font-size: 0.8em;
     font-weight: 600;
     background: var(--vscode-editor-inactiveSelectionBackground);
+    color: var(--vscode-foreground);
   }
   .badge.blocking {
     background: var(--vscode-inputValidation-errorBackground);
     color: var(--vscode-inputValidation-errorForeground);
   }
-  .badge.high { color: var(--vscode-editorError-foreground); }
-  .badge.medium, .badge.yes { color: var(--vscode-editorWarning-foreground); }
-  .badge.low, .badge.no { color: var(--vscode-charts-green); }
   a { color: var(--vscode-textLink-foreground); text-decoration: none; }
   a:hover { text-decoration: underline; }
   .login-btn {
@@ -234,6 +285,47 @@ export function renderPage(body: string): string {
     text-decoration: none;
   }
   .empty-links a:hover { text-decoration: underline; }
+  #ic-tree {
+    margin: 0 -8px;
+    padding-bottom: 80px;
+    user-select: none;
+  }
+  .ic-row {
+    display: flex;
+    align-items: center;
+    height: 22px;
+    gap: 4px;
+    cursor: default;
+    box-sizing: border-box;
+    padding-right: 8px;
+  }
+  .ic-collapsible { cursor: pointer; }
+  .ic-row:hover { background: var(--vscode-list-hoverBackground); }
+  .ic-resource { cursor: pointer; justify-content: space-between; }
+  .ic-chevron { flex-shrink: 0; font-size: 14px; width: 16px; text-align: center; color: var(--vscode-descriptionForeground); }
+  .ic-icon { flex-shrink: 0; font-size: 14px; }
+  .ic-file-img { flex-shrink: 0; width: 14px; height: 14px; object-fit: contain; }
+  .ic-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ic-resource-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 0.85em;
+    color: var(--vscode-foreground);
+  }
+  .ic-resource-cost {
+    flex-shrink: 0;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.85em;
+    margin-right: 8px;
+  }
   .login-status {
     margin-top: 4px;
     font-size: 0.9em;
@@ -244,7 +336,7 @@ export function renderPage(body: string): string {
     margin: 6px 0 0 0;
   }
   .issue-list li {
-    padding: 4px 0;
+    padding: 6px 0;
     border-bottom: 1px solid var(--vscode-widget-border);
   }
   .issue-list li:last-child { border-bottom: none; }
@@ -252,13 +344,62 @@ export function renderPage(body: string): string {
     color: var(--vscode-foreground);
     text-decoration: none;
     display: block;
-    font-size: 0.9em;
-    line-height: 1.4;
   }
-  .issue-list a:hover { color: var(--vscode-textLink-foreground); }
-  .resource-link-name {
+  .issue-list a:hover .resource-link-name { color: var(--vscode-textLink-foreground); }
+  .file-path {
+    font-family: var(--vscode-editor-font-family);
+    font-size: 0.8em;
+    color: var(--vscode-descriptionForeground);
+    margin-bottom: 4px;
     word-break: break-all;
   }
+  .resource-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .resource-link-name {
+    font-family: var(--vscode-editor-font-family);
+    font-size: 0.85em;
+    word-break: break-all;
+    line-height: 1.4;
+  }
+  .resource-row-cost {
+    color: var(--vscode-charts-green);
+    font-size: 0.85em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .resource-row-issues {
+    display: flex;
+    gap: 4px;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    margin-left: 6px;
+  }
+  [data-tooltip] {
+    position: relative;
+  }
+  [data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--vscode-editorHoverWidget-background);
+    color: var(--vscode-editorHoverWidget-foreground);
+    border: 1px solid var(--vscode-editorHoverWidget-border);
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s;
+    z-index: 10;
+  }
+  [data-tooltip]:hover::after { opacity: 1; }
   .back-nav {
     margin-bottom: 8px;
   }
@@ -288,6 +429,25 @@ export function renderPage(body: string): string {
     gap: 4px;
     font-size: 0.9em;
   }
+  .guardrail-banner {
+    padding: 7px 10px;
+    margin-bottom: 8px;
+    border-radius: 3px;
+    border-left: 3px solid;
+  }
+  .guardrail-banner.blocking {
+    background: var(--vscode-inputValidation-errorBackground);
+    color: var(--vscode-inputValidation-errorForeground);
+    border-color: var(--vscode-inputValidation-errorBorder);
+  }
+  .guardrail-banner.warning {
+    background: var(--vscode-inputValidation-warningBackground);
+    color: var(--vscode-inputValidation-warningForeground);
+    border-color: var(--vscode-inputValidation-warningBorder);
+  }
+  .guardrail-banner-name { font-weight: bold; margin-bottom: 2px; }
+  .guardrail-banner-message { font-size: 0.9em; }
+  .guardrail-banner-cost { font-size: 0.85em; margin-top: 4px; opacity: 0.9; }
   .copilot-fix {
     display: flex;
     justify-content: flex-end;
@@ -305,9 +465,54 @@ export function renderPage(body: string): string {
     color: var(--vscode-button-secondaryForeground);
   }
   .copilot-fix-btn:hover { background: var(--vscode-button-secondaryHoverBackground); }
+  .org-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 5px 8px;
+    border-top: 1px solid var(--vscode-panel-border);
+    background: var(--vscode-sideBar-background);
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .org-footer .org-name {
+    color: var(--vscode-foreground);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .org-footer .org-dot { color: var(--vscode-charts-green); font-size: 0.75em; }
+  .org-footer .org-label { color: var(--vscode-descriptionForeground); font-weight: normal; }
+  .org-footer a { color: var(--vscode-textLink-foreground); font-size: 0.85em; }
+  body.has-footer { padding-bottom: 36px; }
+  body.has-footer .empty-links { bottom: 52px; }
+`;
+
+export function renderPage(body: string, opts?: RenderOptions): string {
+  const { orgInfo, guardrails, cspSource, codiconUri } = opts ?? {};
+  const footer = orgInfo && orgInfo.organizations.length > 0 ? renderOrgFooter(orgInfo) : '';
+  const banner = guardrails && guardrails.length > 0 ? renderGuardrailsBanner(guardrails) : '';
+  const extraSrc = cspSource ? ` ${cspSource}` : '';
+  const codiconLink = codiconUri ? `<link rel="stylesheet" href="${codiconUri}">` : '';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'${extraSrc}; script-src 'unsafe-inline'; font-src${
+    extraSrc || ' none'
+  }; img-src${extraSrc || ' none'};">
+${codiconLink}
+<style>
+${STYLES}
 </style>
 </head>
-<body>${body}
+<body class="${footer ? 'has-footer' : ''}">${banner}${body}
+${footer}
 <script>
 (function() {
   const vscode = acquireVsCodeApi();
@@ -315,6 +520,12 @@ export function renderPage(body: string): string {
     const btn = e.target.closest('.copilot-fix-btn');
     if (btn) {
       vscode.postMessage({ command: 'fixWithCopilot', prompt: btn.dataset.prompt });
+      return;
+    }
+    const cmd = e.target.closest('[data-command]');
+    if (cmd) {
+      e.preventDefault();
+      document.dispatchEvent(new CustomEvent('infracost', { detail: { command: cmd.dataset.command } }));
     }
   });
   document.addEventListener('infracost', function(e) {
@@ -326,67 +537,248 @@ export function renderPage(body: string): string {
 </html>`;
 }
 
-export interface FileSummaryResource {
-  name: string;
-  line: number;
-  monthlyCost: string;
-  policyIssues: number;
-  tagIssues: number;
-}
-
-export function renderEmpty(loggedIn?: boolean, resources?: FileSummaryResource[]): string {
-  let statusText = '';
-  if (loggedIn === true) {
-    statusText = '<span style="color:var(--vscode-charts-green);">● Logged in</span>';
-  } else if (loggedIn === false) {
-    statusText = '<span style="color:var(--vscode-descriptionForeground);">○ Not logged in</span>';
-  }
-
-  let resourcesHtml = '';
-  if (resources && resources.length > 0) {
-    const items = resources
-      .map((r) => {
-        const badges: string[] = [];
-        badges.push(`<span class="badge">${esc(r.monthlyCost)}/mo</span>`);
-        if (r.policyIssues > 0) {
-          badges.push(`<span class="badge high">${r.policyIssues} policy</span>`);
-        }
-        if (r.tagIssues > 0) {
-          badges.push(`<span class="badge medium">${r.tagIssues} tag</span>`);
-        }
-        return `<li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'revealResource',uri:'',line:${
-          r.line
-        }}}));return false;"><div class="resource-link-name">${esc(
-          r.name
-        )}</div><div class="badges">${badges.join('')}</div></a></li>`;
-      })
-      .join('');
-    resourcesHtml = `<div class="section"><strong>Resources</strong><ul class="issue-list">${items}</ul></div>`;
-  }
-
-  return renderPage(`${resourcesHtml || '<div class="state">No resource selected</div>'}
-<div class="empty-links">
-  <a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'troubleshoot'}}));return false;">Troubleshooting</a>
+function renderFooterLinks(): string {
+  return `<div class="empty-links">
+  <a href="#" data-command="troubleshoot">Troubleshooting</a>
   <a href="https://infracost.io/community-chat">Join the Slack</a>
   <a href="https://github.com/infracost/vscode-infracost/discussions">Raise an issue</a>
-  ${statusText ? `<div class="login-status">${statusText}</div>` : ''}
-</div>`);
+</div>`;
 }
 
-export function renderScanning(): string {
-  return renderPage(`<div class="state">Scanning...</div>`);
+function renderOrgFooter(orgInfo: OrgInfo): string {
+  const active = orgInfo.organizations.find((o) => o.id === orgInfo.selectedOrgId);
+  if (!active) {
+    return '';
+  }
+  const changeLink =
+    orgInfo.organizations.length > 1 ? `<a href="#" data-command="selectOrg">Change</a>` : '';
+  return `<div class="org-footer"><span class="org-name"><span class="org-dot">●</span><span class="org-label">Organization:</span>${esc(
+    active.name
+  )}</span>${changeLink}</div>`;
+}
+
+function renderGuardrailsBanner(guardrails: GuardrailStatus[]): string {
+  return guardrails
+    .map((g) => {
+      const cls = g.blockPr ? 'blocking' : 'warning';
+      const icon = g.blockPr ? '⛔' : '⚠️';
+      const costParts: string[] = [];
+      if (g.totalMonthlyCost) costParts.push(`Total: ${esc(g.totalMonthlyCost)}/mo`);
+      if (g.threshold) costParts.push(`Limit: ${esc(g.threshold)}`);
+      const costLine =
+        costParts.length > 0
+          ? `<div class="guardrail-banner-cost">${costParts.join('&nbsp;&nbsp;')}</div>`
+          : '';
+      return `<div class="guardrail-banner ${cls}"><div class="guardrail-banner-name">${icon} ${esc(
+        g.name
+      )}</div><div class="guardrail-banner-message">${esc(g.message)}</div>${costLine}</div>`;
+    })
+    .join('');
+}
+
+export function renderEmpty(files: WorkspaceSummaryFile[], opts?: RenderOptions): string {
+  const filesJson = JSON.stringify(
+    files.map((f) => ({
+      path: f.path,
+      uri: f.uri,
+      resources: f.resources.map((r) => ({
+        name: r.name,
+        line: r.line,
+        monthlyCost: r.monthlyCost ?? '',
+      })),
+    }))
+  )
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e');
+
+  const body = `
+<div id="ic-tree"></div>
+${renderFooterLinks()}
+<script>
+(function () {
+  var FILES = ${filesJson};
+  var FILE_ICONS = ${JSON.stringify(opts?.fileIconUris ?? {})};
+
+  function buildTree(files) {
+    var roots = [];
+    files.forEach(function (file) {
+      var parts = file.path.replace(/\\\\/g, '/').split('/').filter(Boolean);
+      if (parts.length > 0) insertFile(roots, parts, file);
+    });
+    sortNodes(roots);
+    return roots;
+  }
+
+  function insertFile(nodes, parts, file) {
+    if (parts.length === 1) {
+      nodes.push({ type: 'file', label: parts[0], uri: file.uri, resources: file.resources });
+      return;
+    }
+    var label = parts[0];
+    var folder = null;
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].type === 'folder' && nodes[i].label === label) { folder = nodes[i]; break; }
+    }
+    if (!folder) {
+      folder = { type: 'folder', label: label, children: [] };
+      nodes.push(folder);
+    }
+    insertFile(folder.children, parts.slice(1), file);
+  }
+
+  function sortNodes(nodes) {
+    nodes.sort(function (a, b) {
+      if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+      return a.label < b.label ? -1 : a.label > b.label ? 1 : 0;
+    });
+    nodes.forEach(function (n) { if (n.type === 'folder') sortNodes(n.children); });
+  }
+
+  function fileIconNode(name) {
+    var ext = name.split('.').pop() || '';
+    var uri = FILE_ICONS[ext];
+    if (uri) {
+      var img = document.createElement('img');
+      img.src = uri;
+      img.className = 'ic-file-img';
+      return img;
+    }
+    return icon('file-code');
+  }
+
+  function el(tag, cls) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    return e;
+  }
+
+  function icon(name) {
+    return el('i', 'codicon codicon-' + name);
+  }
+
+  function renderNodes(nodes, container, depth) {
+    nodes.forEach(function (node) {
+      if (node.type === 'folder') renderFolder(node, container, depth);
+      else renderFile(node, container, depth);
+    });
+  }
+
+  function renderCollapsible(labelText, iconName, chevronName, children, container, depth) {
+    var item = el('div', 'ic-item');
+    var row = el('div', 'ic-row ic-collapsible');
+    row.style.paddingLeft = (depth * 8 + 4) + 'px';
+
+    var chevron = icon(chevronName);
+    chevron.className += ' ic-chevron';
+    var nodeIcon = icon(iconName);
+    nodeIcon.className += ' ic-icon';
+    var label = el('span', 'ic-label');
+    label.textContent = labelText;
+
+    row.appendChild(chevron);
+    row.appendChild(nodeIcon);
+    row.appendChild(label);
+
+    var childContainer = el('div', 'ic-children');
+    renderNodes(children, childContainer, depth + 1);
+
+    row.addEventListener('click', function () {
+      var expanded = item.dataset.expanded !== 'false';
+      item.dataset.expanded = expanded ? 'false' : 'true';
+      chevron.className = 'codicon codicon-' + (expanded ? 'chevron-right' : 'chevron-down') + ' ic-chevron';
+      nodeIcon.className = 'codicon codicon-' + (expanded ? iconName.replace('opened', 'closed').replace('-opened', '') : iconName) + ' ic-icon';
+      childContainer.style.display = expanded ? 'none' : '';
+    });
+
+    item.appendChild(row);
+    item.appendChild(childContainer);
+    container.appendChild(item);
+  }
+
+  function renderFolder(node, container, depth) {
+    renderCollapsible(node.label, 'folder-opened', 'chevron-down', node.children, container, depth);
+  }
+
+  function renderFile(node, container, depth) {
+    var item = el('div', 'ic-item');
+    var row = el('div', 'ic-row ic-collapsible');
+    row.style.paddingLeft = (depth * 8 + 4) + 'px';
+
+    var chevron = icon('chevron-down');
+    chevron.className += ' ic-chevron';
+    var nodeIcon = fileIconNode(node.label);
+    var label = el('span', 'ic-label');
+    label.textContent = node.label;
+
+    row.appendChild(chevron);
+    row.appendChild(nodeIcon);
+    row.appendChild(label);
+
+    var childContainer = el('div', 'ic-children');
+    node.resources.forEach(function (r) { renderResource(r, node.uri, childContainer, depth + 1); });
+
+    row.addEventListener('click', function () {
+      var expanded = item.dataset.expanded !== 'false';
+      item.dataset.expanded = expanded ? 'false' : 'true';
+      chevron.className = 'codicon codicon-' + (expanded ? 'chevron-right' : 'chevron-down') + ' ic-chevron';
+      childContainer.style.display = expanded ? 'none' : '';
+    });
+
+    item.appendChild(row);
+    item.appendChild(childContainer);
+    container.appendChild(item);
+  }
+
+  function renderResource(r, uri, container, depth) {
+    var row = el('div', 'ic-row ic-resource');
+    row.style.paddingLeft = (depth * 8 + 42) + 'px';
+
+    var name = el('span', 'ic-resource-name');
+    name.textContent = r.name;
+    row.appendChild(name);
+
+    if (r.monthlyCost && r.monthlyCost !== '$0.00') {
+      var cost = el('span', 'ic-resource-cost');
+      cost.textContent = r.monthlyCost + '/mo';
+      row.appendChild(cost);
+    }
+
+    row.addEventListener('click', function () {
+      document.dispatchEvent(new CustomEvent('infracost', {
+        detail: { command: 'revealResource', uri: uri, line: r.line }
+      }));
+    });
+
+    container.appendChild(row);
+  }
+
+  var root = document.getElementById('ic-tree');
+  if (root) {
+    if (FILES.length === 0) {
+      var msg = document.createElement('div');
+      msg.className = 'state';
+      msg.textContent = 'No resources found';
+      root.appendChild(msg);
+    } else {
+      renderNodes(buildTree(FILES), root, 0);
+    }
+  }
+})();
+</script>`;
+
+  return renderPage(body, opts);
+}
+
+export function renderScanning(opts?: RenderOptions): string {
+  return renderPage(`<div class="state">Scanning...</div>`, opts);
 }
 
 export function renderLogin(): string {
   return renderPage(`<div class="state">
   <p>Login to Infracost Cloud to see Costs, FinOps policies, and Tagging issues.</p>
-  <button class="login-btn" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'login'}}))">Login to Infracost</button>
+  <button class="login-btn" data-command="login">Login to Infracost</button>
 </div>
-<div class="empty-links">
-  <a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'troubleshoot'}}));return false;">Troubleshooting</a>
-  <a href="https://infracost.io/community-chat">Join the Slack</a>
-  <a href="https://github.com/infracost/vscode-infracost/discussions">Raise an issue</a>
-</div>`);
+${renderFooterLinks()}`);
 }
 
 export function renderLoginVerifying(userCode: string): string {
@@ -397,21 +789,17 @@ export function renderLoginVerifying(userCode: string): string {
   )}</div>
   <p style="color:var(--vscode-descriptionForeground);margin-top:8px;">Waiting for login to complete, this may take a few seconds…</p>
 </div>
-<div class="empty-links">
-  <a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'troubleshoot'}}));return false;">Troubleshooting</a>
-  <a href="https://infracost.io/community-chat">Join the Slack</a>
-  <a href="https://github.com/infracost/vscode-infracost/discussions">Raise an issue</a>
-</div>`);
+${renderFooterLinks()}`);
 }
 
-export function renderTroubleshooting(status: StatusInfo): string {
+export function renderTroubleshooting(status: StatusInfo, opts?: RenderOptions): string {
   const serverStatus = status.version
     ? '<span style="color:var(--vscode-charts-green);">● Server running</span>'
     : '<span style="color:var(--vscode-editorError-foreground);">● Server not running</span>';
 
   const loginStatus = status.loggedIn
     ? '<span style="color:var(--vscode-charts-green);">● Logged in</span>'
-    : '<span style="color:var(--vscode-descriptionForeground);">○ Not logged in</span> — <a href="#" onclick="document.dispatchEvent(new CustomEvent(\'infracost\',{detail:{command:\'login\'}}));return false;">Login</a>';
+    : '<span style="color:var(--vscode-descriptionForeground);">○ Not logged in</span> — <a href="#" data-command="login">Login</a>';
 
   const configStatus = status.configFound
     ? `Found (${status.projectCount} project${status.projectCount !== 1 ? 's' : ''})`
@@ -422,8 +810,9 @@ export function renderTroubleshooting(status: StatusInfo): string {
       ? status.projectNames.map((n) => `<li>${esc(n)}</li>`).join('')
       : '<li style="color:var(--vscode-descriptionForeground);">None</li>';
 
-  return renderPage(`
-<div class="back-nav"><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'back'}}));return false;">&larr; Back</a></div>
+  return renderPage(
+    `
+<div class="back-nav"><a href="#" data-command="back">&larr; Back</a></div>
 <div class="section status-indicators">
   <div>${serverStatus}</div>
   <div>${loginStatus}</div>
@@ -447,60 +836,60 @@ export function renderTroubleshooting(status: StatusInfo): string {
 <div class="section">
   <strong>Actions</strong>
   <ul class="project-list">
-    <li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'restartClient'}}));return false;">Restart client</a></li>
-    <li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'restartLsp'}}));return false;">Restart language server</a></li>
-    <li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'viewLogs'}}));return false;">View logs</a></li>
-    <li><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'generateBundle'}}));return false;">Generate support bundle</a></li>
+    <li><a href="#" data-command="restartClient">Restart client</a></li>
+    <li><a href="#" data-command="restartLsp">Restart language server</a></li>
+    <li><a href="#" data-command="viewLogs">View logs</a></li>
+    <li><a href="#" data-command="generateBundle">Generate support bundle</a></li>
   </ul>
 </div>
-`);
+`,
+    opts
+  );
 }
 
 export function renderResult(
   data: ResourceDetailsResult,
   copilotAvailable: boolean,
-  resources?: FileSummaryResource[]
+  opts?: RenderOptions
 ): string {
   if (data.scanning) {
-    return renderScanning();
+    return renderScanning(opts);
   }
   if (data.needsLogin) {
     return renderLogin();
   }
   if (!data.resource) {
-    return renderEmpty(!data.needsLogin, resources);
+    return renderEmpty([], opts);
   }
-  return renderPage(renderResource(data.resource, copilotAvailable));
+  return renderPage(renderResource(data.resource, copilotAvailable), opts);
 }
 
 function renderResource(r: ResourceDetail, copilotAvailable: boolean): string {
   const parts: string[] = [];
 
-  parts.push(
-    `<div class="back-nav"><a href="#" onclick="document.dispatchEvent(new CustomEvent('infracost',{detail:{command:'back'}}));return false;">&larr; Back</a></div>`
-  );
+  parts.push(`<div class="back-nav"><a href="#" data-command="back">&larr; Back</a></div>`);
 
   parts.push(`
     <div class="header">
       <div class="resource-name">${esc(r.name)}</div>
-      <div class="resource-cost">${esc(r.monthlyCost)}/mo</div>
     </div>
   `);
 
   if (r.costComponents && r.costComponents.length > 0) {
     parts.push(`
-      <details class="section" open>
-        <summary>Cost Components</summary>
+      <details class="section">
+        <summary>Cost Components <span class="resource-cost">${esc(
+          r.monthlyCost
+        )}/mo</span></summary>
         <table>
-          <thead><tr><th>Component</th><th>Qty</th><th>Unit</th><th>Price</th><th>Monthly</th></tr></thead>
+          <thead><tr><th>Component</th><th>Qty</th><th>Price</th><th>Monthly</th></tr></thead>
           <tbody>
             ${r.costComponents
               .map(
                 (c) => `
               <tr>
                 <td>${esc(c.name)}</td>
-                <td class="num">${esc(c.monthlyQuantity)}</td>
-                <td>${esc(c.unit)}</td>
+                <td class="num">${esc(c.monthlyQuantity)} ${esc(c.unit)}</td>
                 <td class="num">${esc(c.price)}</td>
                 <td class="num">${esc(c.monthlyCost)}</td>
               </tr>
@@ -544,24 +933,7 @@ function renderViolation(
     badges.push(`<span class="badge blocking">Blocking</span>`);
   }
 
-  if (v.policyDetail?.risk) {
-    const cls = v.policyDetail.risk.toLowerCase();
-    badges.push(
-      `<span class="badge ${cls}">Risk: ${esc(sentenceCase(v.policyDetail.risk))}</span>`
-    );
-  }
-  if (v.policyDetail?.effort) {
-    const cls = v.policyDetail.effort.toLowerCase();
-    badges.push(
-      `<span class="badge ${cls}">Effort: ${esc(sentenceCase(v.policyDetail.effort))}</span>`
-    );
-  }
-  if (v.policyDetail?.downtime) {
-    const cls = v.policyDetail.downtime.toLowerCase();
-    badges.push(
-      `<span class="badge ${cls}">Downtime: ${esc(sentenceCase(v.policyDetail.downtime))}</span>`
-    );
-  }
+  const badgesHtml = badges.length > 0 ? `<div class="badges">${badges.join('')}</div>` : '';
 
   let details = '';
   if (v.policyDetail) {
@@ -619,11 +991,8 @@ function renderViolation(
   }
 
   return `
-    <details class="violation">
-      <summary>
-        <strong>${esc(v.policyDetail?.shortTitle || v.policyName)}</strong>
-        <div class="badges">${badges.join('')}</div>
-      </summary>
+    <details class="violation" open>
+      <summary>${esc(v.policyDetail?.shortTitle || v.policyName)}${badgesHtml}</summary>
       <div class="violation-message">${linkify(v.message)}</div>
       ${savings}
       ${details}
@@ -692,17 +1061,15 @@ function renderTagViolation(
     )}">Fix with Copilot</button></div>`;
   }
 
+  const badgesHtml = badges.length > 0 ? `<div class="badges">${badges.join('')}</div>` : '';
+
   return `
-    <div class="violation">
-      <div class="violation-header">
-        <strong>${esc(v.policyName)}</strong>
-        <div class="badges">${badges.join('')}</div>
-      </div>
-      ${v.policyMessage ? `<div class="policy-message">${esc(v.policyMessage)}</div>` : ''}
-      <div class="violation-message">${linkify(v.message)}</div>
+    <details class="violation" open>
+      <summary>${esc(v.policyName)}${badgesHtml}</summary>
+      ${v.policyMessage ? `<div class="violation-message">${esc(v.policyMessage)}</div>` : ''}
       ${tagList}
       ${copilotBtn}
-    </div>
+    </details>
   `;
 }
 
@@ -721,10 +1088,6 @@ function escAttr(s: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/\n/g, '&#10;');
-}
-
-function sentenceCase(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 }
 
 function linkify(s: string): string {
