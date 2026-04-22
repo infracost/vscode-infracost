@@ -16,6 +16,7 @@ let client: LanguageClient | undefined;
 let resourceViewProvider: ResourceViewProvider;
 let extensionPath: string;
 let pendingLogin: { uri: string; userCode: string } | undefined;
+let hasShownOrgSelector = false;
 
 function resolveServerPath(extensionPath: string): string {
   const binaryName = os.platform() === 'win32' ? 'infracost-ls.exe' : 'infracost-ls';
@@ -344,6 +345,7 @@ async function setupClient(c: LanguageClient): Promise<void> {
   c.onNotification('infracost/scanComplete', handleScanComplete);
   c.onNotification('infracost/loginComplete', () => {
     pendingLogin = undefined;
+    hasShownOrgSelector = false;
     resourceViewProvider.update({ scanning: true });
   });
   c.onNotification('infracost/logoutComplete', () => {
@@ -386,6 +388,18 @@ async function checkAuthStatus() {
 async function handleScanComplete() {
   if (!client) {
     return;
+  }
+
+  // Refresh org info after each scan — user.json is populated by this point.
+  try {
+    const info = await client.sendRequest<OrgInfo>('infracost/orgs');
+    resourceViewProvider.setOrgInfo(info);
+    if (!hasShownOrgSelector && info.organizations.length > 1 && !info.hasExplicitSelection) {
+      hasShownOrgSelector = true;
+      resourceViewProvider.handleSelectOrg();
+    }
+  } catch (e) {
+    vscode.window.showWarningMessage('Infracost: failed to fetch org info');
   }
 
   // Prefer the active editor, but fall back to any visible editor showing a

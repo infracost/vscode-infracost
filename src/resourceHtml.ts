@@ -88,6 +88,7 @@ export interface OrgEntry {
 export interface OrgInfo {
   organizations: OrgEntry[];
   selectedOrgId: string;
+  hasExplicitSelection: boolean;
 }
 
 export interface WorkspaceSummaryResource {
@@ -285,6 +286,26 @@ const STYLES = `
     text-decoration: none;
   }
   .empty-links a:hover { text-decoration: underline; }
+  #ic-filter-bar {
+    padding: 4px 0 6px;
+    position: sticky;
+    top: 0;
+    background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+    z-index: 1;
+  }
+  #ic-filter {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+    padding: 3px 6px;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+  }
+  #ic-filter:focus { border-color: var(--vscode-focusBorder); }
   #ic-tree {
     margin: 0 -8px;
     padding-bottom: 80px;
@@ -320,11 +341,16 @@ const STYLES = `
     font-size: 0.85em;
     color: var(--vscode-foreground);
   }
-  .ic-resource-cost {
+  .ic-badge-issues {
     flex-shrink: 0;
-    color: var(--vscode-descriptionForeground);
-    font-size: 0.85em;
+    padding: 0 5px;
+    border-radius: 3px;
+    font-size: 0.75em;
+    line-height: 16px;
+    white-space: nowrap;
     margin-right: 8px;
+    background: var(--vscode-inputValidation-warningBackground);
+    color: var(--vscode-inputValidation-warningForeground);
   }
   .login-status {
     margin-top: 4px;
@@ -494,7 +520,7 @@ const STYLES = `
 
 export function renderPage(body: string, opts?: RenderOptions): string {
   const { orgInfo, guardrails, cspSource, codiconUri } = opts ?? {};
-  const footer = orgInfo && orgInfo.organizations.length > 0 ? renderOrgFooter(orgInfo) : '';
+  const footer = orgInfo && orgInfo.organizations?.length > 0 ? renderOrgFooter(orgInfo) : '';
   const banner = guardrails && guardrails.length > 0 ? renderGuardrailsBanner(guardrails) : '';
   const extraSrc = cspSource ? ` ${cspSource}` : '';
   const codiconLink = codiconUri ? `<link rel="stylesheet" href="${codiconUri}">` : '';
@@ -510,12 +536,13 @@ ${codiconLink}
 <style>
 ${STYLES}
 </style>
+<script>window.__vscode = acquireVsCodeApi();</script>
 </head>
 <body class="${footer ? 'has-footer' : ''}">${banner}${body}
 ${footer}
 <script>
 (function() {
-  const vscode = acquireVsCodeApi();
+  const vscode = window.__vscode;
   document.addEventListener('click', function(e) {
     const btn = e.target.closest('.copilot-fix-btn');
     if (btn) {
@@ -585,6 +612,8 @@ export function renderEmpty(files: WorkspaceSummaryFile[], opts?: RenderOptions)
         name: r.name,
         line: r.line,
         monthlyCost: r.monthlyCost ?? '',
+        policyIssues: r.policyIssues || 0,
+        tagIssues: r.tagIssues || 0,
       })),
     }))
   )
@@ -592,12 +621,48 @@ export function renderEmpty(files: WorkspaceSummaryFile[], opts?: RenderOptions)
     .replace(/>/g, '\\u003e');
 
   const body = `
+<div id="ic-filter-bar"><input id="ic-filter" type="text" placeholder="Filter..."></div>
 <div id="ic-tree"></div>
 ${renderFooterLinks()}
 <script>
 (function () {
   var FILES = ${filesJson};
   var FILE_ICONS = ${JSON.stringify(opts?.fileIconUris ?? {})};
+  var TREE = null;
+
+  function filterTree(nodes, q) {
+    var result = [];
+    nodes.forEach(function (node) {
+      if (node.type === 'folder') {
+        var filtered = filterTree(node.children, q);
+        if (filtered.length > 0) result.push({ type: 'folder', label: node.label, children: filtered });
+      } else if (node.type === 'file') {
+        var filenameMatch = node.label.toLowerCase().indexOf(q) !== -1;
+        if (filenameMatch) {
+          result.push(node);
+        } else {
+          var matched = node.resources.filter(function (r) { return r.name.toLowerCase().indexOf(q) !== -1; });
+          if (matched.length > 0) result.push({ type: 'file', label: node.label, uri: node.uri, resources: matched });
+        }
+      }
+    });
+    return result;
+  }
+
+  function render(q) {
+    var isFiltering = !!(q && q.length > 0);
+    var nodes = isFiltering ? filterTree(TREE, q.toLowerCase()) : TREE;
+    var root = document.getElementById('ic-tree');
+    root.innerHTML = '';
+    if (FILES.length === 0 || (isFiltering && nodes.length === 0)) {
+      var msg = document.createElement('div');
+      msg.className = 'state';
+      msg.textContent = FILES.length === 0 ? 'No resources found' : 'No matches';
+      root.appendChild(msg);
+    } else {
+      renderNodes(nodes, root, 0, isFiltering);
+    }
+  }
 
   function buildTree(files) {
     var roots = [];
@@ -656,19 +721,20 @@ ${renderFooterLinks()}
     return el('i', 'codicon codicon-' + name);
   }
 
-  function renderNodes(nodes, container, depth) {
+  function renderNodes(nodes, container, depth, forceExpand) {
     nodes.forEach(function (node) {
-      if (node.type === 'folder') renderFolder(node, container, depth);
+      if (node.type === 'folder') renderFolder(node, container, depth, forceExpand);
       else renderFile(node, container, depth);
     });
   }
 
-  function renderCollapsible(labelText, iconName, chevronName, children, container, depth) {
+  function renderCollapsible(labelText, iconName, chevronName, children, container, depth, forceExpand) {
     var item = el('div', 'ic-item');
     var row = el('div', 'ic-row ic-collapsible');
     row.style.paddingLeft = (depth * 8 + 4) + 'px';
 
-    var chevron = icon(chevronName);
+    var startExpanded = forceExpand || chevronName === 'chevron-down';
+    var chevron = icon(startExpanded ? 'chevron-down' : 'chevron-right');
     chevron.className += ' ic-chevron';
     var nodeIcon = icon(iconName);
     nodeIcon.className += ' ic-icon';
@@ -680,7 +746,8 @@ ${renderFooterLinks()}
     row.appendChild(label);
 
     var childContainer = el('div', 'ic-children');
-    renderNodes(children, childContainer, depth + 1);
+    if (!startExpanded) childContainer.style.display = 'none';
+    renderNodes(children, childContainer, depth + 1, forceExpand);
 
     row.addEventListener('click', function () {
       var expanded = item.dataset.expanded !== 'false';
@@ -695,8 +762,8 @@ ${renderFooterLinks()}
     container.appendChild(item);
   }
 
-  function renderFolder(node, container, depth) {
-    renderCollapsible(node.label, 'folder-opened', 'chevron-down', node.children, container, depth);
+  function renderFolder(node, container, depth, forceExpand) {
+    renderCollapsible(node.label, 'folder-opened', 'chevron-down', node.children, container, depth, forceExpand);
   }
 
   function renderFile(node, container, depth) {
@@ -715,7 +782,13 @@ ${renderFooterLinks()}
     row.appendChild(label);
 
     var childContainer = el('div', 'ic-children');
-    node.resources.forEach(function (r) { renderResource(r, node.uri, childContainer, depth + 1); });
+    var sortedResources = node.resources.slice().sort(function (a, b) {
+      var ia = (a.policyIssues || 0) + (a.tagIssues || 0);
+      var ib = (b.policyIssues || 0) + (b.tagIssues || 0);
+      if (ib !== ia) return ib - ia;
+      return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+    });
+    sortedResources.forEach(function (r) { renderResource(r, node.uri, childContainer, depth + 1); });
 
     row.addEventListener('click', function () {
       var expanded = item.dataset.expanded !== 'false';
@@ -737,10 +810,11 @@ ${renderFooterLinks()}
     name.textContent = r.name;
     row.appendChild(name);
 
-    if (r.monthlyCost && r.monthlyCost !== '$0.00') {
-      var cost = el('span', 'ic-resource-cost');
-      cost.textContent = r.monthlyCost + '/mo';
-      row.appendChild(cost);
+    var totalIssues = (r.policyIssues || 0) + (r.tagIssues || 0);
+    if (totalIssues > 0) {
+      var badge = el('span', 'ic-badge-issues');
+      badge.textContent = totalIssues + ' issue' + (totalIssues !== 1 ? 's' : '');
+      row.appendChild(badge);
     }
 
     row.addEventListener('click', function () {
@@ -752,16 +826,21 @@ ${renderFooterLinks()}
     container.appendChild(row);
   }
 
-  var root = document.getElementById('ic-tree');
-  if (root) {
-    if (FILES.length === 0) {
-      var msg = document.createElement('div');
-      msg.className = 'state';
-      msg.textContent = 'No resources found';
-      root.appendChild(msg);
-    } else {
-      renderNodes(buildTree(FILES), root, 0);
-    }
+  TREE = buildTree(FILES);
+
+  var filterInput = document.getElementById('ic-filter');
+  var vs = window.__vscode;
+  var savedState = vs ? vs.getState() : null;
+  var initialFilter = (savedState && savedState.filter) || '';
+  if (filterInput && initialFilter) filterInput.value = initialFilter;
+  render(initialFilter);
+
+  if (filterInput) {
+    filterInput.addEventListener('input', function () {
+      var q = filterInput.value;
+      if (vs) vs.setState({ filter: q });
+      render(q);
+    });
   }
 })();
 </script>`;

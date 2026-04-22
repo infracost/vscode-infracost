@@ -206,14 +206,13 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
       this.setHtml(renderEmpty([], this.renderOpts));
       return;
     }
-    const opts = this.renderOpts;
     this.client
       .sendRequest<WorkspaceSummaryResult>('infracost/workspaceSummary')
       .then((result) => {
-        this.setHtml(renderEmpty(result?.files ?? [], opts));
+        this.setHtml(renderEmpty(result?.files ?? [], this.renderOpts));
       })
       .catch(() => {
-        this.setHtml(renderEmpty([], opts));
+        this.setHtml(renderEmpty([], this.renderOpts));
       });
   }
 
