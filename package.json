@@ -2,7 +2,7 @@
   "name": "infracost",
   "displayName": "Infracost",
   "description": "Cloud cost estimates for Terraform in your editor",
-  "version": "0.3.9",
+  "version": "0.4.0",
   "publisher": "Infracost",
   "license": "Apache-2.0",
   "icon": "infracost-logo.png",
@@ -46,7 +46,7 @@
         {
           "type": "webview",
           "id": "infracost.resourceDetails",
-          "name": "Resource Details"
+          "name": "Explorer"
         }
       ]
     },
@@ -109,6 +109,14 @@
       {
         "command": "infracost.restartLsp",
         "title": "Infracost: Restart Language Server"
+      },
+      {
+        "command": "infracost.selectOrg",
+        "title": "Infracost: Switch Organization"
+      },
+      {
+        "command": "infracost.logout",
+        "title": "Infracost: Logout"
       }
     ]
   },
@@ -142,6 +150,7 @@
     "webpack-cli": "^5.0.2"
   },
   "dependencies": {
+    "@vscode/codicons": "^0.0.45",
     "flatted": "^3.4.2",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver-protocol": "^3.17.5"

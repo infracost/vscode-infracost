@@ -9,13 +9,14 @@ import {
   TransportKind,
 } from 'vscode-languageclient/node';
 import { Trace } from 'vscode-languageserver-protocol';
-import { ResourceViewProvider, ResourceDetailsResult } from './resourceView';
+import { ResourceViewProvider, ResourceDetailsResult, OrgInfo } from './resourceView';
 import { StatusInfo } from './resourceHtml';
 
 let client: LanguageClient | undefined;
 let resourceViewProvider: ResourceViewProvider;
 let extensionPath: string;
 let pendingLogin: { uri: string; userCode: string } | undefined;
+let hasShownOrgSelector = false;
 
 function resolveServerPath(extensionPath: string): string {
   const binaryName = os.platform() === 'win32' ? 'infracost-ls.exe' : 'infracost-ls';
@@ -80,7 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.showErrorMessage(`Failed to start Infracost language server: ${error}`);
     });
 
-  resourceViewProvider = new ResourceViewProvider();
+  resourceViewProvider = new ResourceViewProvider(context.extensionUri);
   resourceViewProvider.setClient(client);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(ResourceViewProvider.viewType, resourceViewProvider)
@@ -172,7 +173,6 @@ export function activate(context: vscode.ExtensionContext) {
           resourceViewProvider.update(result);
           vscode.commands.executeCommand(`${ResourceViewProvider.viewType}.focus`);
 
-          // Scroll the editor to the resource line.
           if (editor && editor.document.uri.toString() === uri) {
             const pos = new vscode.Position(line, 0);
             editor.selection = new vscode.Selection(pos, pos);
@@ -224,6 +224,26 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('infracost.showOutputChannel', () => {
       client?.outputChannel.show(true);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('infracost.selectOrg', () => {
+      resourceViewProvider.handleSelectOrg();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('infracost.logout', async () => {
+      if (!client) {
+        vscode.window.showErrorMessage('Infracost language server is not running.');
+        return;
+      }
+      try {
+        await client.sendRequest('infracost/logout');
+      } catch (e) {
+        vscode.window.showErrorMessage(`Infracost logout failed: ${e}`);
+      }
     })
   );
 
@@ -318,15 +338,23 @@ function isSupportedFile(fsPath: string): boolean {
 }
 
 async function setupClient(c: LanguageClient): Promise<void> {
+  resourceViewProvider.setGuardrails([]);
   const trace = vscode.workspace.getConfiguration('infracost').get<string>('trace.server', 'off');
   await c.setTrace(Trace.fromString(trace));
   c.onNotification('infracost/updateAvailable', handleUpdateAvailable);
   c.onNotification('infracost/scanComplete', handleScanComplete);
   c.onNotification('infracost/loginComplete', () => {
     pendingLogin = undefined;
+    hasShownOrgSelector = false;
     resourceViewProvider.update({ scanning: true });
   });
+  c.onNotification('infracost/logoutComplete', () => {
+    resourceViewProvider.showLogin();
+  });
   await checkAuthStatus();
+  c.sendRequest<OrgInfo>('infracost/orgs')
+    .then((info) => resourceViewProvider.setOrgInfo(info))
+    .catch((err) => c.outputChannel.appendLine(`infracost/orgs: ${err}`));
 }
 
 async function checkAuthStatus() {
@@ -362,25 +390,48 @@ async function handleScanComplete() {
     return;
   }
 
+  // Refresh org info after each scan — user.json is populated by this point.
+  try {
+    const info = await client.sendRequest<OrgInfo>('infracost/orgs');
+    resourceViewProvider.setOrgInfo(info);
+    if (!hasShownOrgSelector && info.organizations.length > 1 && !info.hasExplicitSelection) {
+      hasShownOrgSelector = true;
+      resourceViewProvider.handleSelectOrg();
+    }
+  } catch (e) {
+    vscode.window.showWarningMessage('Infracost: failed to fetch org info');
+  }
+
   // Prefer the active editor, but fall back to any visible editor showing a
   // supported file (e.g. when Copilot Chat has focus after a fix).
   let editor = vscode.window.activeTextEditor;
   if (!editor || !isSupportedFile(editor.document.uri.fsPath)) {
     editor = vscode.window.visibleTextEditors.find((e) => isSupportedFile(e.document.uri.fsPath));
   }
-  if (!editor) {
-    resourceViewProvider.update({ scanning: false });
-    return;
-  }
-
   try {
+    const statusPromise = client.sendRequest<StatusInfo>('infracost/status');
+
+    if (!editor) {
+      const statusOutcome = await statusPromise.catch(() => null);
+      if (statusOutcome) {
+        resourceViewProvider.setGuardrails(statusOutcome.triggeredGuardrails ?? []);
+      }
+      resourceViewProvider.update({ scanning: false });
+      return;
+    }
+
     const uri = editor.document.uri.toString();
     const { line } = editor.selection.active;
-    const result = await client.sendRequest<ResourceDetailsResult>('infracost/resourceDetails', {
-      uri,
-      line,
-    });
-    resourceViewProvider.update(result);
+    const [detailsOutcome, statusOutcome] = await Promise.allSettled([
+      client.sendRequest<ResourceDetailsResult>('infracost/resourceDetails', { uri, line }),
+      statusPromise,
+    ]);
+    if (statusOutcome.status === 'fulfilled') {
+      resourceViewProvider.setGuardrails(statusOutcome.value.triggeredGuardrails ?? []);
+    }
+    if (detailsOutcome.status === 'fulfilled') {
+      resourceViewProvider.update(detailsOutcome.value);
+    }
   } catch {
     // Ignore errors
   }
