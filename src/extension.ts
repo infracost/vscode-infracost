@@ -163,9 +163,6 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
         try {
-          // Capture editor before focus shifts to the webview panel.
-          const editor = vscode.window.activeTextEditor;
-
           const result = await client.sendRequest<ResourceDetailsResult>(
             'infracost/resourceDetails',
             { uri, line }
@@ -173,7 +170,12 @@ export function activate(context: vscode.ExtensionContext) {
           resourceViewProvider.update(result);
           vscode.commands.executeCommand(`${ResourceViewProvider.viewType}.focus`);
 
-          if (editor && editor.document.uri.toString() === uri) {
+          if (uri) {
+            const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(uri));
+            const editor = await vscode.window.showTextDocument(doc, {
+              preview: false,
+              preserveFocus: false,
+            });
             const pos = new vscode.Position(line, 0);
             editor.selection = new vscode.Selection(pos, pos);
             editor.revealRange(
