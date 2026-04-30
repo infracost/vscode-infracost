@@ -513,6 +513,7 @@ const STYLES = `
   }
   .org-footer .org-dot { color: var(--vscode-charts-green); font-size: 0.75em; }
   .org-footer .org-label { color: var(--vscode-descriptionForeground); font-weight: normal; }
+  .org-footer .org-actions { display: flex; align-items: center; gap: 8px; }
   .org-footer a { color: var(--vscode-textLink-foreground); font-size: 0.85em; }
   body.has-footer { padding-bottom: 36px; }
   body.has-footer .empty-links { bottom: 52px; }
@@ -579,9 +580,10 @@ function renderOrgFooter(orgInfo: OrgInfo): string {
   }
   const changeLink =
     orgInfo.organizations.length > 1 ? `<a href="#" data-command="selectOrg">Change</a>` : '';
+  const logoutLink = `<a href="#" data-command="logout">Logout</a>`;
   return `<div class="org-footer"><span class="org-name"><span class="org-dot">●</span><span class="org-label">Organization:</span>${esc(
     active.name
-  )}</span>${changeLink}</div>`;
+  )}</span><span class="org-actions">${changeLink}${logoutLink}</span></div>`;
 }
 
 function renderGuardrailsBanner(guardrails: GuardrailStatus[]): string {
