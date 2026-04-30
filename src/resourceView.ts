@@ -156,6 +156,9 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
         case 'selectOrg':
           this.handleSelectOrg();
           break;
+        case 'logout':
+          vscode.commands.executeCommand('infracost.logout');
+          break;
         default:
           break;
       }
@@ -216,11 +219,26 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
       });
   }
 
-  handleSelectOrg(): void {
-    const { orgInfo, client } = this;
-    if (!orgInfo || !client) {
+  async handleSelectOrg(): Promise<void> {
+    const { client } = this;
+    if (!client) {
       return;
     }
+
+    let orgInfo: OrgInfo;
+    try {
+      orgInfo = await client.sendRequest<OrgInfo>('infracost/orgs', { refresh: true });
+      this.setOrgInfo(orgInfo);
+    } catch (err) {
+      vscode.window.showErrorMessage(`Failed to refresh organizations: ${err}`);
+      return;
+    }
+
+    if (orgInfo.organizations.length === 0) {
+      vscode.window.showInformationMessage('No Infracost organizations found.');
+      return;
+    }
+
     const items = orgInfo.organizations.map((o) => ({
       label: o.name,
       description: o.slug,
