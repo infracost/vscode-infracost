@@ -1,7 +1,3 @@
-[![Open VSX Version](https://img.shields.io/open-vsx/v/infracost/infracost)](https://open-vsx.org/extension/infracost/infracost) [![Version](https://img.shields.io/visual-studio-marketplace/v/infracost.infracost)](https://marketplace.visualstudio.com/items?itemName=Infracost.infracost)
-[![Rating](https://img.shields.io/visual-studio-marketplace/r/infracost.infracost)](https://marketplace.visualstudio.com/items?itemName=Infracost.infracost)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/infracost.infracost)](https://marketplace.visualstudio.com/items?itemName=Infracost.infracost)
-
 # Infracost VS Code Extension
 
 Infracost's VS Code extension shows you cost estimates for Terraform right in your editor! It also surfaces FinOps policies and tagging issues so you can catch problems before they reach production.
