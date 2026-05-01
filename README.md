@@ -51,7 +51,7 @@ In addition to Terraform (`.tf`) files, the extension supports CloudFormation te
 ## Get started
 
 > [!NOTE]
-> **Prerequisites:** Make sure you have VS Code **v1.75.0** or above and an [Infracost account](https://www.infracost.io). See [Requirements](#requirements) for details.
+> **Prerequisites:** Make sure you have VS Code **v1.100.0** or above and an [Infracost account](https://www.infracost.io). See [Requirements](#requirements) for details.
 
 ### 1. Install the extension
 
@@ -95,7 +95,7 @@ Open a workspace containing Terraform files. The extension will start the langua
 
 ## Requirements
 
-- VS Code **v1.75.0** or above
+- VS Code **v1.100.0** or above
 - An [Infracost](https://www.infracost.io) account
 
 ## Configuration
