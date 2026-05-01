@@ -3,17 +3,17 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: monthly
+      interval: weekly
     reviewers:
-      - infracost/engineering
+      - infracost/security
     labels:
       - dependencies
   - package-ecosystem: npm
     directory: "/"
     schedule:
-      interval: monthly
+      interval: weekly
     open-pull-requests-limit: 10
     reviewers:
-      - infracost/engineering
+      - infracost/security
     labels:
       - dependencies
