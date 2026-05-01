@@ -256,6 +256,12 @@ export function activate(context: vscode.ExtensionContext) {
           ? await client.sendRequest<StatusInfo>('infracost/status')
           : { error: 'Language server not running' };
 
+        const trace = client
+          ? await client
+              .sendRequest('infracost/exportTrace', {})
+              .catch((e) => ({ available: false, error: String(e) }))
+          : { available: false, error: 'Language server not running' };
+
         const config = vscode.workspace.getConfiguration('infracost');
         const lspPath = config.get<string>('serverPath') || resolveServerPath(extensionPath);
 
@@ -269,6 +275,7 @@ export function activate(context: vscode.ExtensionContext) {
           arch: process.arch,
           lspPath,
           status,
+          trace,
         };
 
         const bundlePath = path.join(os.tmpdir(), `infracost-support-${Date.now()}.json`);

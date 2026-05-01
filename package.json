@@ -2,7 +2,7 @@
   "name": "infracost",
   "displayName": "Infracost",
   "description": "Cloud cost estimates for Terraform in your editor",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "publisher": "Infracost",
   "license": "Apache-2.0",
   "icon": "infracost-logo.png",
@@ -44,6 +44,7 @@
     "views": {
       "infracost": [
         {
+          "icon": "infracost-logo.png",
           "type": "webview",
           "id": "infracost.resourceDetails",
           "name": "Explorer"
