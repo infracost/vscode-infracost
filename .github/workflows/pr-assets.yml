@@ -26,7 +26,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm
@@ -37,7 +37,7 @@ jobs:
       - name: Package extension
         run: npm run vscode:package -- --target=${{ matrix.vsce_target }}
       - name: Upload vsix as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.vsce_target }}
           path: "*.vsix"
