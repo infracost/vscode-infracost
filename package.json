@@ -143,7 +143,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-prettier": "^4.2.1",
-    "ovsx": "^0.10.9",
+    "ovsx": "^0.10.11",
     "prettier": "^2.8.8",
     "ts-loader": "^9.4.2",
     "typescript": "^5.0.4",
