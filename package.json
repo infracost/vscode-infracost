@@ -145,7 +145,7 @@
     "eslint-plugin-prettier": "^4.2.1",
     "ovsx": "^0.10.9",
     "prettier": "^2.8.8",
-    "ts-loader": "^9.4.2",
+    "ts-loader": "^9.5.7",
     "typescript": "^5.0.4",
     "webpack": "^5.77.0",
     "webpack-cli": "^7.0.2"
