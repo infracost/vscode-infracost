@@ -147,7 +147,7 @@
     "prettier": "^2.8.8",
     "ts-loader": "^9.4.2",
     "typescript": "^5.0.4",
-    "webpack": "^5.77.0",
+    "webpack": "^5.106.2",
     "webpack-cli": "^7.0.2"
   },
   "dependencies": {
