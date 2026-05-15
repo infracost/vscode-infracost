@@ -30,8 +30,10 @@ function resolveServerPath(extensionPath: string): string {
 function createClient(): LanguageClient {
   const config = vscode.workspace.getConfiguration('infracost');
   const serverPath = config.get<string>('serverPath') || resolveServerPath(extensionPath);
+  const currency = config.get<string>('currency', 'USD');
 
   const serverEnv: Record<string, string> = { ...process.env } as Record<string, string>;
+  serverEnv.INFRACOST_CLI_CURRENCY = currency;
   const debug = config.get<boolean>('debug', false);
   if (debug) {
     const debugUI = config.get<string>('debugUI', '');
@@ -59,6 +61,7 @@ function createClient(): LanguageClient {
       clientName: 'vscode',
       extensionVersion:
         vscode.extensions.getExtension('Infracost.infracost')?.packageJSON?.version ?? 'unknown',
+      currency,
     },
   };
 
@@ -351,6 +354,13 @@ async function setupClient(c: LanguageClient): Promise<void> {
   const trace = vscode.workspace.getConfiguration('infracost').get<string>('trace.server', 'off');
   await c.setTrace(Trace.fromString(trace));
   c.onNotification('infracost/updateAvailable', handleUpdateAvailable);
+  c.onNotification(
+    'infracost/log',
+    (params: { level?: string; message?: string; fields?: Record<string, unknown> }) => {
+      const fields = params.fields ? ` ${JSON.stringify(params.fields)}` : '';
+      c.outputChannel.appendLine(`[${params.level ?? 'info'}] ${params.message ?? ''}${fields}`);
+    }
+  );
   c.onNotification('infracost/scanComplete', handleScanComplete);
   c.onNotification('infracost/loginComplete', () => {
     pendingLogin = undefined;
