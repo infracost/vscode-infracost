@@ -582,7 +582,7 @@ function renderOrgFooter(orgInfo: OrgInfo): string {
     orgInfo.organizations.length > 1 ? `<a href="#" data-command="selectOrg">Change</a>` : '';
   const logoutLink = `<a href="#" data-command="logout">Logout</a>`;
   return `<div class="org-footer"><span class="org-name"><span class="org-dot">●</span><span class="org-label">Organization:</span>${esc(
-    active.name
+    active.name,
   )}</span><span class="org-actions">${changeLink}${logoutLink}</span></div>`;
 }
 
@@ -599,7 +599,7 @@ function renderGuardrailsBanner(guardrails: GuardrailStatus[]): string {
           ? `<div class="guardrail-banner-cost">${costParts.join('&nbsp;&nbsp;')}</div>`
           : '';
       return `<div class="guardrail-banner ${cls}"><div class="guardrail-banner-name">${icon} ${esc(
-        g.name
+        g.name,
       )}</div><div class="guardrail-banner-message">${esc(g.message)}</div>${costLine}</div>`;
     })
     .join('');
@@ -617,7 +617,7 @@ export function renderEmpty(files: WorkspaceSummaryFile[], opts?: RenderOptions)
         policyIssues: r.policyIssues || 0,
         tagIssues: r.tagIssues || 0,
       })),
-    }))
+    })),
   )
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e');
@@ -866,7 +866,7 @@ export function renderLoginVerifying(userCode: string): string {
   return renderPage(`<div class="state">
   <p>Verify the code in your browser matches:</p>
   <div style="font-size:1.4em;font-weight:bold;letter-spacing:2px;margin:12px 0;">${esc(
-    userCode
+    userCode,
   )}</div>
   <p style="color:var(--vscode-descriptionForeground);margin-top:8px;">Waiting for login to complete, this may take a few seconds…</p>
 </div>
@@ -924,14 +924,14 @@ export function renderTroubleshooting(status: StatusInfo, opts?: RenderOptions):
   </ul>
 </div>
 `,
-    opts
+    opts,
   );
 }
 
 export function renderResult(
   data: ResourceDetailsResult,
   copilotAvailable: boolean,
-  opts?: RenderOptions
+  opts?: RenderOptions,
 ): string {
   if (data.scanning) {
     return renderScanning(opts);
@@ -960,7 +960,7 @@ function renderResource(r: ResourceDetail, copilotAvailable: boolean): string {
     parts.push(`
       <details class="section">
         <summary>Cost Components <span class="resource-cost">${esc(
-          r.monthlyCost
+          r.monthlyCost,
         )}/mo</span></summary>
         <table>
           <thead><tr><th>Component</th><th>Qty</th><th>Price</th><th>Monthly</th></tr></thead>
@@ -974,7 +974,7 @@ function renderResource(r: ResourceDetail, copilotAvailable: boolean): string {
                 <td class="num">${esc(c.price)}</td>
                 <td class="num">${esc(c.monthlyCost)}</td>
               </tr>
-            `
+            `,
               )
               .join('')}
           </tbody>
@@ -1007,7 +1007,7 @@ function renderResource(r: ResourceDetail, copilotAvailable: boolean): string {
 function renderViolation(
   v: ViolationDetail,
   resourceName: string,
-  copilotAvailable: boolean
+  copilotAvailable: boolean,
 ): string {
   const badges: string[] = [];
   if (v.blockPullRequest) {
@@ -1023,22 +1023,22 @@ function renderViolation(
     if (pd.riskDescription) {
       rows.push(
         `<div class="detail-row"><strong>Risk</strong><div>${linkify(
-          pd.riskDescription
-        )}</div></div>`
+          pd.riskDescription,
+        )}</div></div>`,
       );
     }
     if (pd.effortDescription) {
       rows.push(
         `<div class="detail-row"><strong>Effort</strong><div>${linkify(
-          pd.effortDescription
-        )}</div></div>`
+          pd.effortDescription,
+        )}</div></div>`,
       );
     }
     if (pd.downtimeDescription) {
       rows.push(
         `<div class="detail-row"><strong>Downtime</strong><div>${linkify(
-          pd.downtimeDescription
-        )}</div></div>`
+          pd.downtimeDescription,
+        )}</div></div>`,
       );
     }
     if (pd.additionalDetails) {
@@ -1052,7 +1052,7 @@ function renderViolation(
   const savings =
     v.monthlySavings && v.monthlySavings !== '$0.00'
       ? `<div class="savings">Potential savings: ${esc(
-          v.monthlySavings.replace(/^-/, '')
+          v.monthlySavings.replace(/^-/, ''),
         )}/mo</div>`
       : '';
 
@@ -1067,7 +1067,7 @@ function renderViolation(
     }
     const prompt = promptParts.join('\n\n');
     copilotBtn = `<div class="copilot-fix"><button class="copilot-fix-btn" data-prompt="${escAttr(
-      prompt
+      prompt,
     )}">Fix with Copilot</button></div>`;
   }
 
@@ -1085,7 +1085,7 @@ function renderViolation(
 function renderTagViolation(
   v: TagViolationDetail,
   resourceName: string,
-  copilotAvailable: boolean
+  copilotAvailable: boolean,
 ): string {
   const badges: string[] = [];
   if (v.blockPR) {
@@ -1110,7 +1110,7 @@ function renderTagViolation(
                   .map((val) => `<code>${esc(val)}</code>`)
                   .join(', ')}</div>`
               : ''
-          }</div>`
+          }</div>`,
       )
       .join('');
   }
@@ -1138,7 +1138,7 @@ function renderTagViolation(
     }
     const prompt = promptParts.join('\n\n');
     copilotBtn = `<div class="copilot-fix"><button class="copilot-fix-btn" data-prompt="${escAttr(
-      prompt
+      prompt,
     )}">Fix with Copilot</button></div>`;
   }
 

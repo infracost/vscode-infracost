@@ -87,7 +87,7 @@ export function activate(context: vscode.ExtensionContext) {
   resourceViewProvider = new ResourceViewProvider(context.extensionUri);
   resourceViewProvider.setClient(client);
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(ResourceViewProvider.viewType, resourceViewProvider)
+    vscode.window.registerWebviewViewProvider(ResourceViewProvider.viewType, resourceViewProvider),
   );
 
   // Move the sidebar view to the secondary sidebar on first install.
@@ -110,9 +110,9 @@ export function activate(context: vscode.ExtensionContext) {
               () => context.globalState.update(movedKey, true),
               () => {
                 // Ignore error if commands fail
-              }
+              },
             );
-        }
+        },
       );
   }
 
@@ -121,7 +121,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (!editor) {
         resourceViewProvider.update({ scanning: false });
       }
-    })
+    }),
   );
 
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -147,14 +147,14 @@ export function activate(context: vscode.ExtensionContext) {
         try {
           const result = await client.sendRequest<ResourceDetailsResult>(
             'infracost/resourceDetails',
-            { uri, line }
+            { uri, line },
           );
           resourceViewProvider.update(result);
         } catch {
           // Ignore errors (e.g. server not ready)
         }
       }, 150);
-    })
+    }),
   );
 
   // Triggered by code lens clicks — fetches resource details and reveals the sidebar.
@@ -168,7 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
         try {
           const result = await client.sendRequest<ResourceDetailsResult>(
             'infracost/resourceDetails',
-            { uri, line }
+            { uri, line },
           );
           resourceViewProvider.update(result);
           vscode.commands.executeCommand(`${ResourceViewProvider.viewType}.focus`);
@@ -183,21 +183,21 @@ export function activate(context: vscode.ExtensionContext) {
             editor.selection = new vscode.Selection(pos, pos);
             editor.revealRange(
               new vscode.Range(pos, pos),
-              vscode.TextEditorRevealType.InCenterIfOutsideViewport
+              vscode.TextEditorRevealType.InCenterIfOutsideViewport,
             );
           }
         } catch {
           // Ignore errors
         }
-      }
-    )
+      },
+    ),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('infracost.login', async () => {
       if (!client) {
         vscode.window.showErrorMessage(
-          'Infracost language server is not running. Try restarting it first.'
+          'Infracost language server is not running. Try restarting it first.',
         );
         return;
       }
@@ -223,19 +223,19 @@ export function activate(context: vscode.ExtensionContext) {
         pendingLogin = undefined;
         vscode.window.showErrorMessage(`Infracost login failed: ${e}`);
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('infracost.showOutputChannel', () => {
       client?.outputChannel.show(true);
-    })
+    }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('infracost.selectOrg', () => {
       resourceViewProvider.handleSelectOrg();
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -249,7 +249,7 @@ export function activate(context: vscode.ExtensionContext) {
       } catch (e) {
         vscode.window.showErrorMessage(`Infracost logout failed: ${e}`);
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -290,7 +290,7 @@ export function activate(context: vscode.ExtensionContext) {
       } catch (e) {
         vscode.window.showErrorMessage(`Failed to generate support bundle: ${e}`);
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -305,9 +305,9 @@ export function activate(context: vscode.ExtensionContext) {
             await client.restart();
             await setupClient(client);
           }
-        }
+        },
       );
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -330,9 +330,9 @@ export function activate(context: vscode.ExtensionContext) {
           resourceViewProvider.setClient(client);
           await client.start();
           await setupClient(client);
-        }
+        },
       );
-    })
+    }),
   );
 }
 
@@ -359,7 +359,7 @@ async function setupClient(c: LanguageClient): Promise<void> {
     (params: { level?: string; message?: string; fields?: Record<string, unknown> }) => {
       const fields = params.fields ? ` ${JSON.stringify(params.fields)}` : '';
       c.outputChannel.appendLine(`[${params.level ?? 'info'}] ${params.message ?? ''}${fields}`);
-    }
+    },
   );
   c.onNotification('infracost/scanComplete', handleScanComplete);
   c.onNotification('infracost/loginComplete', () => {
@@ -398,7 +398,7 @@ async function checkAuthStatus() {
       // If not scanning and not needing login, show empty state
       resourceViewProvider.update({ scanning: false });
     }
-  } catch (error) {
+  } catch {
     // If auth check fails, show empty state instead of staying in scanning
     resourceViewProvider.update({ scanning: false });
   }
@@ -417,7 +417,7 @@ async function handleScanComplete() {
       hasShownOrgSelector = true;
       resourceViewProvider.handleSelectOrg();
     }
-  } catch (e) {
+  } catch {
     vscode.window.showWarningMessage('Infracost: failed to fetch org info');
   }
 
@@ -476,7 +476,7 @@ async function handleUpdateAvailable(params: {
 
   const choice = await vscode.window.showInformationMessage(
     `Infracost Language Server update available: v${params.currentVersion} → v${params.latestVersion}`,
-    'Update'
+    'Update',
   );
   if (choice !== 'Update' || !client) {
     return;
@@ -490,11 +490,11 @@ async function handleUpdateAvailable(params: {
       },
       async () => {
         await client?.sendRequest('infracost/update');
-      }
+      },
     );
     await vscode.commands.executeCommand('infracost.restartLsp');
     vscode.window.showInformationMessage(
-      `Infracost Language Server updated to v${params.latestVersion}.`
+      `Infracost Language Server updated to v${params.latestVersion}.`,
     );
   } catch (e) {
     vscode.window.showErrorMessage(`Infracost update failed: ${e}`);
