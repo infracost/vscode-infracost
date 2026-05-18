@@ -54,7 +54,11 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
 
   private fileIconUris: Record<string, string> = {};
 
-  constructor(private readonly extensionUri: vscode.Uri) {}
+  private readonly extensionUri: vscode.Uri;
+
+  constructor(extensionUri: vscode.Uri) {
+    this.extensionUri = extensionUri;
+  }
 
   setClient(c: LanguageClient): void {
     this.client = c;
@@ -100,8 +104,8 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
           '@vscode',
           'codicons',
           'dist',
-          'codicon.css'
-        )
+          'codicon.css',
+        ),
       )
       .toString();
     this.cspSource = webview.cspSource;
@@ -198,8 +202,8 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
         this.setHtml(
           renderTroubleshooting(
             { ...DEFAULT_STATUS, version: 'error fetching status' },
-            this.renderOpts
-          )
+            this.renderOpts,
+          ),
         );
       });
   }
