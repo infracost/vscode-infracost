@@ -111,13 +111,3 @@ jobs:
         run: npx vsce publish --packagePath $(find . -iname *.vsix) -p ${{ secrets.MARKETPLACE_PAT }}
       - name: Publish to OpenVSX
         run: find . -iname '*.vsix' -exec npx ovsx publish {} -p ${{ secrets.OPEN_VSX_PAT }} \;
-      - name: Create GitHub release
-        id: create_release
-        uses: softprops/action-gh-release@v3
-        with:
-          files: "*.vsix"
-          tag_name: ${{ github.ref }}
-          name: v${{ env.PACKAGE_VERSION }}
-          draft: true
-          generate_release_notes: true
-          prerelease: false
