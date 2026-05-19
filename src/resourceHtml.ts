@@ -1098,8 +1098,8 @@ function renderViolation(
 
   return `
     <details class="violation" data-details-id="violation::${escAttr(resourceName)}::${escAttr(
-    v.policyName,
-  )}" open>
+      v.policyName,
+    )}" open>
       <summary>${esc(v.policyDetail?.shortTitle || v.policyName)}${badgesHtml}</summary>
       <div class="violation-message">${linkify(v.message)}</div>
       ${savings}
