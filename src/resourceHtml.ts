@@ -544,6 +544,31 @@ ${footer}
 <script>
 (function() {
   const vscode = window.__vscode;
+  const state = vscode.getState() || {};
+  const detailsState = state.detailsState || {};
+  function saveDetailsState() {
+    const prev = vscode.getState() || {};
+    vscode.setState(Object.assign({}, prev, { detailsState: detailsState }));
+  }
+  function hydrateDetails() {
+    const els = document.querySelectorAll('details[data-details-id]');
+    els.forEach(function (el) {
+      const id = el.getAttribute('data-details-id');
+      const saved = detailsState[id];
+      if (saved !== undefined) {
+        el.open = saved;
+      }
+      el.addEventListener('toggle', function () {
+        detailsState[id] = el.open;
+        saveDetailsState();
+      });
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', hydrateDetails);
+  } else {
+    hydrateDetails();
+  }
   document.addEventListener('click', function(e) {
     const btn = e.target.closest('.copilot-fix-btn');
     if (btn) {
@@ -958,7 +983,7 @@ function renderResource(r: ResourceDetail, copilotAvailable: boolean): string {
 
   if (r.costComponents && r.costComponents.length > 0) {
     parts.push(`
-      <details class="section">
+      <details class="section" data-details-id="cost-components::${escAttr(r.name)}">
         <summary>Cost Components <span class="resource-cost">${esc(
           r.monthlyCost,
         )}/mo</span></summary>
@@ -985,7 +1010,7 @@ function renderResource(r: ResourceDetail, copilotAvailable: boolean): string {
 
   if (r.violations && r.violations.length > 0) {
     parts.push(`
-      <details class="section" open>
+      <details class="section" data-details-id="finops::${escAttr(r.name)}" open>
         <summary>FinOps Issues (${r.violations.length})</summary>
         ${r.violations.map((v) => renderViolation(v, r.name, copilotAvailable)).join('')}
       </details>
@@ -994,7 +1019,7 @@ function renderResource(r: ResourceDetail, copilotAvailable: boolean): string {
 
   if (r.tagViolations && r.tagViolations.length > 0) {
     parts.push(`
-      <details class="section" open>
+      <details class="section" data-details-id="tag-section::${escAttr(r.name)}" open>
         <summary>Tag Issues (${r.tagViolations.length})</summary>
         ${r.tagViolations.map((v) => renderTagViolation(v, r.name, copilotAvailable)).join('')}
       </details>
@@ -1072,7 +1097,9 @@ function renderViolation(
   }
 
   return `
-    <details class="violation" open>
+    <details class="violation" data-details-id="violation::${escAttr(resourceName)}::${escAttr(
+    v.policyName,
+  )}" open>
       <summary>${esc(v.policyDetail?.shortTitle || v.policyName)}${badgesHtml}</summary>
       <div class="violation-message">${linkify(v.message)}</div>
       ${savings}
@@ -1145,7 +1172,9 @@ function renderTagViolation(
   const badgesHtml = badges.length > 0 ? `<div class="badges">${badges.join('')}</div>` : '';
 
   return `
-    <details class="violation" open>
+    <details class="violation" data-details-id="tag-violation::${escAttr(
+      resourceName,
+    )}::${escAttr(v.policyName)}" open>
       <summary>${esc(v.policyName)}${badgesHtml}</summary>
       ${v.policyMessage ? `<div class="violation-message">${esc(v.policyMessage)}</div>` : ''}
       ${tagList}
