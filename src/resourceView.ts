@@ -137,6 +137,12 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
         case 'troubleshoot':
           this.showTroubleshooting();
           break;
+        case 'settings':
+          vscode.commands.executeCommand(
+            'workbench.action.openSettings',
+            '@ext:Infracost.infracost',
+          );
+          break;
         case 'restartClient':
           vscode.commands.executeCommand('infracost.restartClient');
           break;
