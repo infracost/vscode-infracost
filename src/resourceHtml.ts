@@ -595,6 +595,7 @@ function renderFooterLinks(): string {
   <a href="#" data-command="troubleshoot">Troubleshooting</a>
   <a href="https://infracost.io/community-chat">Join the Slack</a>
   <a href="https://github.com/infracost/vscode-infracost/discussions">Raise an issue</a>
+  <a href="#" data-command="settings">Settings</a>
 </div>`;
 }
 
