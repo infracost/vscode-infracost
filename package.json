@@ -2,7 +2,7 @@
   "name": "infracost",
   "displayName": "Infracost",
   "description": "Cloud cost estimates for Terraform in your editor",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "author": "Infracost",
   "publisher": "Infracost",
   "license": "Apache-2.0",
@@ -32,6 +32,15 @@
     "onLanguage:hcl"
   ],
   "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "restrictedConfigurations": [
+        "infracost.serverPath",
+        "infracost.debugUI"
+      ]
+    }
+  },
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -56,6 +65,7 @@
       "title": "Infracost",
       "properties": {
         "infracost.serverPath": {
+          "scope": "machine",
           "type": "string",
           "default": "",
           "description": "Path to the lsp binary. Leave empty to use the bundled binary."
