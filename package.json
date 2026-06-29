@@ -2,7 +2,7 @@
   "name": "infracost",
   "displayName": "Infracost",
   "description": "Cloud cost estimates for Terraform in your editor",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "author": "Infracost",
   "publisher": "Infracost",
   "license": "Apache-2.0",
@@ -84,6 +84,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show FinOps and tag policy violations as inline diagnostics (squiggly lines and Problems panel)."
+        },
+        "infracost.displayRemoteModulesInTree": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show resources from remote modules in the Explorer tree. Remote module sources cannot be opened from the tree."
         },
         "infracost.currency": {
           "type": "string",
