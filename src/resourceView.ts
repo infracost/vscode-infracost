@@ -155,29 +155,40 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
           vscode.commands.executeCommand('infracost.generateBundle');
           break;
         case 'openResourceLocation': {
-          const uri = msg.uri || (vscode.window.activeTextEditor?.document.uri.toString() ?? '');
+          if (!msg.uri) {
+            break;
+          }
           this.suppressSelectionDetailsUntil = Date.now() + 750;
           vscode.commands.executeCommand(
             'infracost.openResourceLocation',
-            uri,
+            msg.uri,
             msg.line,
             msg.address,
           );
           break;
         }
         case 'showResourceDetails': {
-          const uri = msg.uri || (vscode.window.activeTextEditor?.document.uri.toString() ?? '');
+          if (!msg.uri) {
+            break;
+          }
           vscode.commands.executeCommand(
             'infracost.showResourceDetails',
-            uri,
+            msg.uri,
             msg.line,
             msg.address,
           );
           break;
         }
         case 'revealResource': {
-          const uri = msg.uri || (vscode.window.activeTextEditor?.document.uri.toString() ?? '');
-          vscode.commands.executeCommand('infracost.revealResource', uri, msg.line, msg.address);
+          if (!msg.uri) {
+            break;
+          }
+          vscode.commands.executeCommand(
+            'infracost.revealResource',
+            msg.uri,
+            msg.line,
+            msg.address,
+          );
           break;
         }
         case 'fixWithCopilot':

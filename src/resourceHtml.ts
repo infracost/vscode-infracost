@@ -988,7 +988,7 @@ ${renderFooterLinks()}
     row.appendChild(name);
 
     var totalIssues = (r.policyIssues || 0) + (r.tagIssues || 0);
-    if (totalIssues > 0) {
+    if (totalIssues > 0 && uri) {
       var badge = el('span', 'ic-badge-issues');
       badge.textContent = totalIssues + ' issue' + (totalIssues !== 1 ? 's' : '');
       badge.title = 'Show Infracost details';
@@ -1001,7 +1001,7 @@ ${renderFooterLinks()}
       row.appendChild(badge);
     }
 
-    if (openable) {
+    if (openable && uri) {
       row.addEventListener('click', function () {
         document.dispatchEvent(new CustomEvent('infracost', {
           detail: { command: 'openResourceLocation', uri: uri, line: r.line, address: r.path || r.name || r.label }
