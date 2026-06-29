@@ -102,11 +102,26 @@ export interface WorkspaceSummaryResource {
 export interface WorkspaceSummaryFile {
   path: string;
   uri: string;
+  openable?: boolean;
   resources: WorkspaceSummaryResource[];
+}
+
+export interface WorkspaceSummaryNode {
+  type: 'file' | 'module' | 'resource' | 'folder';
+  label: string;
+  path?: string;
+  uri?: string;
+  openable?: boolean;
+  line?: number;
+  monthlyCost?: string;
+  policyIssues?: number;
+  tagIssues?: number;
+  children?: WorkspaceSummaryNode[];
 }
 
 export interface WorkspaceSummaryResult {
   files: WorkspaceSummaryFile[];
+  tree?: WorkspaceSummaryNode[];
 }
 
 export interface RenderOptions {
@@ -293,8 +308,14 @@ const STYLES = `
     background: var(--vscode-sideBar-background, var(--vscode-editor-background));
     z-index: 1;
   }
+  .ic-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
   #ic-filter {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     box-sizing: border-box;
     background: var(--vscode-input-background);
     color: var(--vscode-input-foreground);
@@ -306,6 +327,20 @@ const STYLES = `
     outline: none;
   }
   #ic-filter:focus { border-color: var(--vscode-focusBorder); }
+  .ic-tree-action {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--vscode-icon-foreground);
+    cursor: pointer;
+  }
+  .ic-tree-action:hover { background: var(--vscode-toolbar-hoverBackground); }
   #ic-tree {
     margin: 0 -8px;
     padding-bottom: 80px;
@@ -322,7 +357,8 @@ const STYLES = `
   }
   .ic-collapsible { cursor: pointer; }
   .ic-row:hover { background: var(--vscode-list-hoverBackground); }
-  .ic-resource { cursor: pointer; justify-content: space-between; }
+  .ic-resource { justify-content: space-between; }
+  .ic-resource-openable { cursor: pointer; }
   .ic-chevron { flex-shrink: 0; font-size: 14px; width: 16px; text-align: center; color: var(--vscode-descriptionForeground); }
   .ic-icon { flex-shrink: 0; font-size: 14px; }
   .ic-file-img { flex-shrink: 0; width: 14px; height: 14px; object-fit: contain; }
@@ -349,8 +385,30 @@ const STYLES = `
     line-height: 16px;
     white-space: nowrap;
     margin-right: 8px;
-    background: var(--vscode-inputValidation-warningBackground);
-    color: var(--vscode-inputValidation-warningForeground);
+    background: var(--vscode-inputValidation-errorBackground);
+    color: var(--vscode-inputValidation-errorForeground);
+    border: 1px solid var(--vscode-inputValidation-errorBorder, transparent);
+    cursor: pointer;
+  }
+  .ic-badge-issues:hover { outline: 1px solid var(--vscode-focusBorder); }
+  .ic-badge-action {
+    flex-shrink: 0;
+    padding: 0 5px;
+    border-radius: 3px;
+    font-size: 0.75em;
+    line-height: 16px;
+    white-space: nowrap;
+    margin-right: 8px;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    border: 1px solid var(--vscode-widget-border, transparent);
+    cursor: pointer;
+    opacity: 0.85;
+  }
+  .ic-badge-action:hover {
+    opacity: 1;
+    color: var(--vscode-foreground);
+    background: var(--vscode-toolbar-hoverBackground);
   }
   .login-status {
     margin-top: 4px;
@@ -631,11 +689,16 @@ function renderGuardrailsBanner(guardrails: GuardrailStatus[]): string {
     .join('');
 }
 
-export function renderEmpty(files: WorkspaceSummaryFile[], opts?: RenderOptions): string {
+export function renderEmpty(
+  files: WorkspaceSummaryFile[],
+  opts?: RenderOptions,
+  treeNodes: WorkspaceSummaryNode[] = [],
+): string {
   const filesJson = JSON.stringify(
     files.map((f) => ({
       path: f.path,
       uri: f.uri,
+      openable: f.openable !== false,
       resources: f.resources.map((r) => ({
         name: r.name,
         line: r.line,
@@ -648,37 +711,74 @@ export function renderEmpty(files: WorkspaceSummaryFile[], opts?: RenderOptions)
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e');
 
+  const treeJson = JSON.stringify(treeNodes).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+
   const body = `
-<div id="ic-filter-bar"><input id="ic-filter" type="text" placeholder="Filter..."></div>
+<div id="ic-filter-bar"><div class="ic-filter-row"><input id="ic-filter" type="text" placeholder="Filter..."><button id="ic-collapse-all" class="ic-tree-action" title="Collapse all" aria-label="Collapse all"><i class="codicon codicon-collapse-all"></i></button><button id="ic-expand-all" class="ic-tree-action" title="Expand all" aria-label="Expand all"><i class="codicon codicon-expand-all"></i></button></div></div>
 <div id="ic-tree"></div>
 ${renderFooterLinks()}
 <script>
 (function () {
   var FILES = ${filesJson};
+  var SERVER_TREE = ${treeJson};
   var FILE_ICONS = ${JSON.stringify(opts?.fileIconUris ?? {})};
   var TREE = null;
+  var vs = window.__vscode;
+  var savedState = vs ? vs.getState() : null;
+  var treeCollapsed = (savedState && savedState.treeCollapsed) || {};
+
+  function saveWebviewState(patch) {
+    if (!vs) return;
+    var prev = vs.getState() || {};
+    vs.setState(Object.assign({}, prev, patch));
+  }
+
+  function nodeStateId(node, depth) {
+    return [node.type || 'node', node.path || node.uri || node.label || '', node.line || 0, depth].join('|');
+  }
+
+  function isCollapsibleNode(node) {
+    return (node.children && node.children.length > 0) || (node.type === 'file' && node.resources && node.resources.length > 0);
+  }
+
+  function setTreeCollapsed(nodes, collapsed, depth) {
+    nodes.forEach(function (node) {
+      if (isCollapsibleNode(node)) {
+        treeCollapsed[nodeStateId(node, depth)] = collapsed;
+      }
+      if (node.children && node.children.length > 0) {
+        setTreeCollapsed(node.children, collapsed, depth + 1);
+      }
+    });
+  }
 
   function filterTree(nodes, q) {
     var result = [];
     nodes.forEach(function (node) {
-      if (node.type === 'folder') {
+      var labelMatch = (node.label || '').toLowerCase().indexOf(q) !== -1;
+      if (node.children && node.children.length > 0) {
         var filtered = filterTree(node.children, q);
-        if (filtered.length > 0) result.push({ type: 'folder', label: node.label, children: filtered });
-      } else if (node.type === 'file') {
-        var filenameMatch = node.label.toLowerCase().indexOf(q) !== -1;
-        if (filenameMatch) {
+        if (labelMatch || filtered.length > 0) {
+          var copy = Object.assign({}, node, { children: labelMatch ? node.children : filtered });
+          result.push(copy);
+        }
+      } else if (node.type === 'file' && node.resources) {
+        if (labelMatch) {
           result.push(node);
         } else {
           var matched = node.resources.filter(function (r) { return r.name.toLowerCase().indexOf(q) !== -1; });
-          if (matched.length > 0) result.push({ type: 'file', label: node.label, uri: node.uri, resources: matched });
+          if (matched.length > 0) result.push({ type: 'file', label: node.label, uri: node.uri, openable: node.openable, resources: matched });
         }
+      } else if (labelMatch) {
+        result.push(node);
       }
     });
     return result;
   }
 
-  function render(q) {
+  function render(q, forceExpandOverride) {
     var isFiltering = !!(q && q.length > 0);
+    var forceExpand = forceExpandOverride === undefined ? isFiltering : forceExpandOverride;
     var nodes = isFiltering ? filterTree(TREE, q.toLowerCase()) : TREE;
     var root = document.getElementById('ic-tree');
     root.innerHTML = '';
@@ -688,7 +788,7 @@ ${renderFooterLinks()}
       msg.textContent = FILES.length === 0 ? 'No resources found' : 'No matches';
       root.appendChild(msg);
     } else {
-      renderNodes(nodes, root, 0, isFiltering);
+      renderNodes(nodes, root, 0, forceExpand);
     }
   }
 
@@ -696,27 +796,28 @@ ${renderFooterLinks()}
     var roots = [];
     files.forEach(function (file) {
       var parts = file.path.replace(/\\\\/g, '/').split('/').filter(Boolean);
-      if (parts.length > 0) insertFile(roots, parts, file);
+      if (parts.length > 0) insertFile(roots, parts, file, '');
     });
     sortNodes(roots);
     return roots;
   }
 
-  function insertFile(nodes, parts, file) {
+  function insertFile(nodes, parts, file, prefix) {
+    var label = parts[0];
+    var currentPath = prefix ? prefix + '/' + label : label;
     if (parts.length === 1) {
-      nodes.push({ type: 'file', label: parts[0], uri: file.uri, resources: file.resources });
+      nodes.push({ type: 'file', label: label, path: file.path, uri: file.uri, openable: file.openable !== false, resources: file.resources });
       return;
     }
-    var label = parts[0];
     var folder = null;
     for (var i = 0; i < nodes.length; i++) {
       if (nodes[i].type === 'folder' && nodes[i].label === label) { folder = nodes[i]; break; }
     }
     if (!folder) {
-      folder = { type: 'folder', label: label, children: [] };
+      folder = { type: 'folder', label: label, path: currentPath, children: [] };
       nodes.push(folder);
     }
-    insertFile(folder.children, parts.slice(1), file);
+    insertFile(folder.children, parts.slice(1), file, currentPath);
   }
 
   function sortNodes(nodes) {
@@ -752,19 +853,24 @@ ${renderFooterLinks()}
   function renderNodes(nodes, container, depth, forceExpand) {
     nodes.forEach(function (node) {
       if (node.type === 'folder') renderFolder(node, container, depth, forceExpand);
-      else renderFile(node, container, depth);
+      else if (node.type === 'module') renderModule(node, container, depth, forceExpand);
+      else if (node.type === 'resource') renderResource(node, node.uri, node.openable !== false, container, depth);
+      else renderFile(node, container, depth, forceExpand);
     });
   }
 
-  function renderCollapsible(labelText, iconName, chevronName, children, container, depth, forceExpand) {
+  function renderCollapsible(labelText, iconName, chevronName, children, container, depth, forceExpand, source) {
     var item = el('div', 'ic-item');
-    var row = el('div', 'ic-row ic-collapsible');
+    var row = el('div', 'ic-row ic-collapsible' + (source && source.openable !== false ? ' ic-resource-openable' : ''));
     row.style.paddingLeft = (depth * 8 + 4) + 'px';
 
-    var startExpanded = forceExpand || chevronName === 'chevron-down';
+    var stateId = nodeStateId(source || { type: 'folder', label: labelText }, depth);
+    var startExpanded = forceExpand || (treeCollapsed[stateId] === undefined ? chevronName === 'chevron-down' : !treeCollapsed[stateId]);
+    item.dataset.expanded = startExpanded ? 'true' : 'false';
     var chevron = icon(startExpanded ? 'chevron-down' : 'chevron-right');
     chevron.className += ' ic-chevron';
-    var nodeIcon = icon(iconName);
+    var displayIconName = iconName === 'folder-opened' && !startExpanded ? 'folder' : iconName;
+    var nodeIcon = icon(displayIconName);
     nodeIcon.className += ' ic-icon';
     var label = el('span', 'ic-label');
     label.textContent = labelText;
@@ -773,16 +879,40 @@ ${renderFooterLinks()}
     row.appendChild(nodeIcon);
     row.appendChild(label);
 
+    if (source && source.type === 'module' && source.openable !== false && source.uri) {
+      var usageBadge = el('span', 'ic-badge-action');
+      usageBadge.textContent = 'usage';
+      usageBadge.title = 'Open module usage';
+      usageBadge.addEventListener('click', function (e) {
+        e.stopPropagation();
+        document.dispatchEvent(new CustomEvent('infracost', {
+          detail: { command: 'openResourceLocation', uri: source.uri, line: source.line || 0 }
+        }));
+      });
+      row.appendChild(usageBadge);
+    }
+
     var childContainer = el('div', 'ic-children');
     if (!startExpanded) childContainer.style.display = 'none';
     renderNodes(children, childContainer, depth + 1, forceExpand);
 
-    row.addEventListener('click', function () {
+    function toggle() {
       var expanded = item.dataset.expanded !== 'false';
       item.dataset.expanded = expanded ? 'false' : 'true';
       chevron.className = 'codicon codicon-' + (expanded ? 'chevron-right' : 'chevron-down') + ' ic-chevron';
-      nodeIcon.className = 'codicon codicon-' + (expanded ? iconName.replace('opened', 'closed').replace('-opened', '') : iconName) + ' ic-icon';
+      var nextIconName = iconName === 'folder-opened' ? (expanded ? 'folder' : 'folder-opened') : iconName;
+      nodeIcon.className = 'codicon codicon-' + nextIconName + ' ic-icon';
       childContainer.style.display = expanded ? 'none' : '';
+      treeCollapsed[stateId] = item.dataset.expanded === 'false';
+      saveWebviewState({ treeCollapsed: treeCollapsed });
+    }
+
+    chevron.addEventListener('click', function (e) {
+      e.stopPropagation();
+      toggle();
+    });
+    row.addEventListener('click', function () {
+      toggle();
     });
 
     item.appendChild(row);
@@ -791,15 +921,31 @@ ${renderFooterLinks()}
   }
 
   function renderFolder(node, container, depth, forceExpand) {
-    renderCollapsible(node.label, 'folder-opened', 'chevron-down', node.children, container, depth, forceExpand);
+    renderCollapsible(node.label, 'folder-opened', 'chevron-down', node.children, container, depth, forceExpand, node);
   }
 
-  function renderFile(node, container, depth) {
+  function renderModule(node, container, depth, forceExpand) {
+    if (node.children && node.children.length > 0) {
+      renderCollapsible(node.label, 'package', 'chevron-down', node.children, container, depth, forceExpand, node);
+    } else {
+      renderResource(node, node.uri, node.openable !== false, container, depth);
+    }
+  }
+
+  function renderFile(node, container, depth, forceExpand) {
+    if (node.children && node.children.length > 0) {
+      renderCollapsible(node.label, 'file-code', 'chevron-down', node.children, container, depth, forceExpand, node);
+      return;
+    }
+
     var item = el('div', 'ic-item');
     var row = el('div', 'ic-row ic-collapsible');
     row.style.paddingLeft = (depth * 8 + 4) + 'px';
 
-    var chevron = icon('chevron-down');
+    var stateId = nodeStateId(node, depth);
+    var startExpanded = treeCollapsed[stateId] !== true;
+    item.dataset.expanded = startExpanded ? 'true' : 'false';
+    var chevron = icon(startExpanded ? 'chevron-down' : 'chevron-right');
     chevron.className += ' ic-chevron';
     var nodeIcon = fileIconNode(node.label);
     var label = el('span', 'ic-label');
@@ -810,19 +956,22 @@ ${renderFooterLinks()}
     row.appendChild(label);
 
     var childContainer = el('div', 'ic-children');
+    if (!startExpanded) childContainer.style.display = 'none';
     var sortedResources = node.resources.slice().sort(function (a, b) {
       var ia = (a.policyIssues || 0) + (a.tagIssues || 0);
       var ib = (b.policyIssues || 0) + (b.tagIssues || 0);
       if (ib !== ia) return ib - ia;
       return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
     });
-    sortedResources.forEach(function (r) { renderResource(r, node.uri, childContainer, depth + 1); });
+    sortedResources.forEach(function (r) { renderResource(r, node.uri, node.openable !== false, childContainer, depth + 1); });
 
     row.addEventListener('click', function () {
       var expanded = item.dataset.expanded !== 'false';
       item.dataset.expanded = expanded ? 'false' : 'true';
       chevron.className = 'codicon codicon-' + (expanded ? 'chevron-right' : 'chevron-down') + ' ic-chevron';
       childContainer.style.display = expanded ? 'none' : '';
+      treeCollapsed[stateId] = item.dataset.expanded === 'false';
+      saveWebviewState({ treeCollapsed: treeCollapsed });
     });
 
     item.appendChild(row);
@@ -830,43 +979,68 @@ ${renderFooterLinks()}
     container.appendChild(item);
   }
 
-  function renderResource(r, uri, container, depth) {
-    var row = el('div', 'ic-row ic-resource');
+  function renderResource(r, uri, openable, container, depth) {
+    var row = el('div', 'ic-row ic-resource' + (openable ? ' ic-resource-openable' : ''));
     row.style.paddingLeft = (depth * 8 + 42) + 'px';
 
     var name = el('span', 'ic-resource-name');
-    name.textContent = r.name;
+    name.textContent = r.name || r.label;
     row.appendChild(name);
 
     var totalIssues = (r.policyIssues || 0) + (r.tagIssues || 0);
-    if (totalIssues > 0) {
+    if (totalIssues > 0 && uri) {
       var badge = el('span', 'ic-badge-issues');
       badge.textContent = totalIssues + ' issue' + (totalIssues !== 1 ? 's' : '');
+      badge.title = 'Show Infracost details';
+      badge.addEventListener('click', function (e) {
+        e.stopPropagation();
+        document.dispatchEvent(new CustomEvent('infracost', {
+          detail: { command: 'showResourceDetails', uri: uri, line: r.line, address: r.path || r.name || r.label }
+        }));
+      });
       row.appendChild(badge);
     }
 
-    row.addEventListener('click', function () {
-      document.dispatchEvent(new CustomEvent('infracost', {
-        detail: { command: 'revealResource', uri: uri, line: r.line }
-      }));
-    });
+    if (openable && uri) {
+      row.addEventListener('click', function () {
+        document.dispatchEvent(new CustomEvent('infracost', {
+          detail: { command: 'openResourceLocation', uri: uri, line: r.line, address: r.path || r.name || r.label }
+        }));
+      });
+    }
 
     container.appendChild(row);
   }
 
-  TREE = buildTree(FILES);
+  TREE = SERVER_TREE && SERVER_TREE.length > 0 ? SERVER_TREE : buildTree(FILES);
 
   var filterInput = document.getElementById('ic-filter');
-  var vs = window.__vscode;
-  var savedState = vs ? vs.getState() : null;
+  var collapseAll = document.getElementById('ic-collapse-all');
+  var expandAll = document.getElementById('ic-expand-all');
   var initialFilter = (savedState && savedState.filter) || '';
   if (filterInput && initialFilter) filterInput.value = initialFilter;
   render(initialFilter);
 
+  if (collapseAll) {
+    collapseAll.addEventListener('click', function () {
+      setTreeCollapsed(TREE, true, 0);
+      saveWebviewState({ treeCollapsed: treeCollapsed });
+      render(filterInput ? filterInput.value : '', false);
+    });
+  }
+
+  if (expandAll) {
+    expandAll.addEventListener('click', function () {
+      setTreeCollapsed(TREE, false, 0);
+      saveWebviewState({ treeCollapsed: treeCollapsed });
+      render(filterInput ? filterInput.value : '', false);
+    });
+  }
+
   if (filterInput) {
     filterInput.addEventListener('input', function () {
       var q = filterInput.value;
-      if (vs) vs.setState({ filter: q });
+      saveWebviewState({ filter: q });
       render(q);
     });
   }

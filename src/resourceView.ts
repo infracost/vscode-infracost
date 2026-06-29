@@ -54,6 +54,8 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
 
   private fileIconUris: Record<string, string> = {};
 
+  private suppressSelectionDetailsUntil = 0;
+
   private readonly extensionUri: vscode.Uri;
 
   constructor(extensionUri: vscode.Uri) {
@@ -152,9 +154,41 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
         case 'generateBundle':
           vscode.commands.executeCommand('infracost.generateBundle');
           break;
+        case 'openResourceLocation': {
+          if (!msg.uri) {
+            break;
+          }
+          this.suppressSelectionDetailsUntil = Date.now() + 750;
+          vscode.commands.executeCommand(
+            'infracost.openResourceLocation',
+            msg.uri,
+            msg.line,
+            msg.address,
+          );
+          break;
+        }
+        case 'showResourceDetails': {
+          if (!msg.uri) {
+            break;
+          }
+          vscode.commands.executeCommand(
+            'infracost.showResourceDetails',
+            msg.uri,
+            msg.line,
+            msg.address,
+          );
+          break;
+        }
         case 'revealResource': {
-          const uri = msg.uri || (vscode.window.activeTextEditor?.document.uri.toString() ?? '');
-          vscode.commands.executeCommand('infracost.revealResource', uri, msg.line);
+          if (!msg.uri) {
+            break;
+          }
+          vscode.commands.executeCommand(
+            'infracost.revealResource',
+            msg.uri,
+            msg.line,
+            msg.address,
+          );
           break;
         }
         case 'fixWithCopilot':
@@ -175,6 +209,10 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
+  shouldSuppressSelectionDetails(): boolean {
+    return Date.now() < this.suppressSelectionDetailsUntil;
+  }
+
   update(data: ResourceDetailsResult): void {
     this.lastData = data;
     if (!data.resource && !data.needsLogin && !data.scanning) {
@@ -182,6 +220,13 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     this.setHtml(renderResult(data, isCopilotAvailable(), this.renderOpts));
+  }
+
+  refreshTree(): void {
+    if (this.lastData?.resource || this.lastData?.needsLogin || this.lastData?.scanning) {
+      return;
+    }
+    this.fetchAndRenderTree();
   }
 
   showLogin(): void {
@@ -222,7 +267,7 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
     this.client
       .sendRequest<WorkspaceSummaryResult>('infracost/workspaceSummary')
       .then((result) => {
-        this.setHtml(renderEmpty(result?.files ?? [], this.renderOpts));
+        this.setHtml(renderEmpty(result?.files ?? [], this.renderOpts, result?.tree ?? []));
       })
       .catch(() => {
         this.setHtml(renderEmpty([], this.renderOpts));

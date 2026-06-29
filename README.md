@@ -104,6 +104,7 @@ Open a workspace containing Terraform files. The extension will start the langua
 | ------------------------------------ | ------------------------------------------------------------------------------------- | --------- |
 | `infracost.serverPath`               | Path to the `lsp` binary. Leave empty to use the bundled binary.                      | (bundled) |
 | `infracost.currency`                 | Currency to use for cost estimates. Options include all currencies supported by the pricing API. | `USD`     |
+| `infracost.displayRemoteModulesInTree` | Show resources from remote modules in the Explorer tree. Remote module sources cannot be opened from the tree. | `false`   |
 | `infracost.runParamsCacheTTLSeconds` | How long (in seconds) to cache run parameters between API calls. Set to 0 to disable. | `300`     |
 
 ## Commands

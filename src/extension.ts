@@ -124,6 +124,14 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   );
 
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('infracost.displayRemoteModulesInTree')) {
+        resourceViewProvider.refreshTree();
+      }
+    }),
+  );
+
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   context.subscriptions.push(
@@ -137,7 +145,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       debounceTimer = setTimeout(async () => {
-        if (!client) {
+        if (!client || resourceViewProvider.shouldSuppressSelectionDetails()) {
           return;
         }
 
@@ -157,22 +165,12 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   );
 
-  // Triggered by code lens clicks — fetches resource details and reveals the sidebar.
+  // Triggered by tree resource rows — opens the source location without replacing the tree.
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      'infracost.revealResource',
+      'infracost.openResourceLocation',
       async (uri: string, line: number) => {
-        if (!client) {
-          return;
-        }
         try {
-          const result = await client.sendRequest<ResourceDetailsResult>(
-            'infracost/resourceDetails',
-            { uri, line },
-          );
-          resourceViewProvider.update(result);
-          vscode.commands.executeCommand(`${ResourceViewProvider.viewType}.focus`);
-
           if (uri) {
             const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(uri));
             const editor = await vscode.window.showTextDocument(doc, {
@@ -186,6 +184,51 @@ export function activate(context: vscode.ExtensionContext) {
               vscode.TextEditorRevealType.InCenterIfOutsideViewport,
             );
           }
+        } catch {
+          // Ignore errors
+        }
+      },
+    ),
+  );
+
+  // Triggered by tree issue badges — fetches details without jumping the editor.
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'infracost.showResourceDetails',
+      async (uri: string, line: number, address?: string) => {
+        if (!client) {
+          return;
+        }
+        try {
+          const result = await client.sendRequest<ResourceDetailsResult>(
+            'infracost/resourceDetails',
+            { uri, line, address },
+          );
+          resourceViewProvider.update(result);
+          vscode.commands.executeCommand(`${ResourceViewProvider.viewType}.focus`);
+        } catch {
+          // Ignore errors
+        }
+      },
+    ),
+  );
+
+  // Triggered by code lens clicks — fetches resource details and reveals the source location.
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'infracost.revealResource',
+      async (uri: string, line: number, address?: string) => {
+        if (!client) {
+          return;
+        }
+        try {
+          await vscode.commands.executeCommand('infracost.showResourceDetails', uri, line, address);
+          await vscode.commands.executeCommand(
+            'infracost.openResourceLocation',
+            uri,
+            line,
+            address,
+          );
         } catch {
           // Ignore errors
         }
