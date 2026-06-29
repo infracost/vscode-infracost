@@ -93,22 +93,13 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [
-        vscode.Uri.joinPath(this.extensionUri, 'node_modules'),
+        vscode.Uri.joinPath(this.extensionUri, 'resources', 'codicons'),
         vscode.Uri.joinPath(this.extensionUri, 'resources', 'icons'),
       ],
     };
     const { webview } = webviewView;
     this.codiconUri = webview
-      .asWebviewUri(
-        vscode.Uri.joinPath(
-          this.extensionUri,
-          'node_modules',
-          '@vscode',
-          'codicons',
-          'dist',
-          'codicon.css',
-        ),
-      )
+      .asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'resources', 'codicons', 'codicon.css'))
       .toString();
     this.cspSource = webview.cspSource;
     const iconUri = (name: string) =>
