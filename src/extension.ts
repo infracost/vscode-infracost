@@ -6,9 +6,9 @@ import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
+  Trace,
   TransportKind,
 } from 'vscode-languageclient/node';
-import { Trace } from 'vscode-languageserver-protocol';
 import { ResourceViewProvider, ResourceDetailsResult, OrgInfo } from './resourceView';
 import { StatusInfo } from './resourceHtml';
 
