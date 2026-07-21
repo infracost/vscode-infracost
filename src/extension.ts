@@ -27,13 +27,70 @@ function resolveServerPath(extensionPath: string): string {
   return binaryName;
 }
 
+function hasEnv(env: Record<string, string>, ...names: string[]): boolean {
+  return names.some((name) => Boolean(env[name]));
+}
+
+function envValue(env: Record<string, string>, ...names: string[]): string | undefined {
+  return names.map((name) => env[name]).find(Boolean);
+}
+
+function getVsCodeProxyEnv(serverEnv: Record<string, string>): Record<string, string> {
+  const httpConfig = vscode.workspace.getConfiguration('http');
+  const proxySupport = httpConfig.get<string>('proxySupport', 'override');
+  if (proxySupport === 'off') {
+    return {};
+  }
+
+  const proxy = httpConfig.get<string>('proxy', '').trim();
+  if (!proxy) {
+    return {};
+  }
+
+  const proxyEnv: Record<string, string> = {};
+  if (!hasEnv(serverEnv, 'HTTPS_PROXY', 'https_proxy')) {
+    proxyEnv.HTTPS_PROXY = envValue(serverEnv, 'HTTP_PROXY', 'http_proxy') || proxy;
+  }
+  if (!hasEnv(serverEnv, 'HTTP_PROXY', 'http_proxy')) {
+    proxyEnv.HTTP_PROXY = proxy;
+  }
+  return proxyEnv;
+}
+
+function getLspProxySettings():
+  { httpProxy?: string; httpsProxy?: string; noProxy?: string } | undefined {
+  const httpConfig = vscode.workspace.getConfiguration('http');
+  const proxySupport = httpConfig.get<string>('proxySupport', 'override');
+  const httpProxy = envValue(process.env as Record<string, string>, 'HTTP_PROXY', 'http_proxy');
+  const httpsProxy = envValue(process.env as Record<string, string>, 'HTTPS_PROXY', 'https_proxy');
+  const noProxy = envValue(process.env as Record<string, string>, 'NO_PROXY', 'no_proxy');
+  const settingsProxy =
+    proxySupport !== 'off' ? httpConfig.get<string>('proxy', '').trim() : undefined;
+
+  const proxy = httpProxy || httpsProxy || settingsProxy;
+  if (!proxy) {
+    return undefined;
+  }
+
+  return {
+    httpProxy: httpProxy || settingsProxy,
+    httpsProxy: httpsProxy || httpProxy || settingsProxy,
+    noProxy,
+  };
+}
+
 function createClient(): LanguageClient {
   const config = vscode.workspace.getConfiguration('infracost');
   const serverPath = config.get<string>('serverPath') || resolveServerPath(extensionPath);
   const currency = config.get<string>('currency', 'USD');
+  const checkForUpdates = config.get<boolean>('checkForUpdates', true);
 
-  const serverEnv: Record<string, string> = { ...process.env } as Record<string, string>;
-  serverEnv.INFRACOST_CLI_CURRENCY = currency;
+  const baseEnv = { ...process.env } as Record<string, string>;
+  const serverEnv: Record<string, string> = {
+    ...baseEnv,
+    ...getVsCodeProxyEnv(baseEnv),
+    INFRACOST_CLI_CURRENCY: currency,
+  };
   const debug = config.get<boolean>('debug', false);
   if (debug) {
     const debugUI = config.get<string>('debugUI', '');
@@ -62,6 +119,8 @@ function createClient(): LanguageClient {
       extensionVersion:
         vscode.extensions.getExtension('Infracost.infracost')?.packageJSON?.version ?? 'unknown',
       currency,
+      checkForUpdates,
+      proxy: getLspProxySettings(),
     },
   };
 
@@ -504,6 +563,13 @@ async function handleUpdateAvailable(params: {
   latestVersion: string;
   currentVersion: string;
 }) {
+  const checkForUpdates = vscode.workspace
+    .getConfiguration('infracost')
+    .get<boolean>('checkForUpdates', true);
+  if (!checkForUpdates) {
+    return;
+  }
+
   if (!params.updateAvailable) {
     return;
   }

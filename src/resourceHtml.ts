@@ -1051,7 +1051,11 @@ ${renderFooterLinks()}
 }
 
 export function renderScanning(opts?: RenderOptions): string {
-  return renderPage(`<div class="state">Scanning...</div>`, opts);
+  return renderPage(
+    `<div class="state">Scanning...</div>
+${renderFooterLinks()}`,
+    opts,
+  );
 }
 
 export function renderLogin(): string {
