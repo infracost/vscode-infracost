@@ -340,7 +340,7 @@
   },
   "dependencies": {
     "@vscode/codicons": "^0.0.45",
-    "fast-uri": "^3.1.2",
+    "fast-uri": "^3.1.4",
     "flatted": "^3.4.2",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver-protocol": "^3.17.5"
