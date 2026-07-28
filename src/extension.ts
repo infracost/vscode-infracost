@@ -438,17 +438,12 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-const cfnPatterns = ['template', 'cloudformation', 'cfn', 'stack', 'infracost'];
-
 function isSupportedFile(fsPath: string): boolean {
-  if (fsPath.endsWith('.tf')) {
+  const lower = fsPath.toLowerCase();
+  if (lower.endsWith('.tf') || lower.endsWith('.hcl')) {
     return true;
   }
-  const base = fsPath.split(/[\\/]/).pop()?.toLowerCase() ?? '';
-  if (base.endsWith('.yml') || base.endsWith('.yaml') || base.endsWith('.json')) {
-    return cfnPatterns.some((p) => base.includes(p));
-  }
-  return false;
+  return lower.endsWith('.yml') || lower.endsWith('.yaml') || lower.endsWith('.json');
 }
 
 async function setupClient(c: LanguageClient): Promise<void> {
