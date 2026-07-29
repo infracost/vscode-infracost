@@ -130,6 +130,9 @@ function createClient(): LanguageClient {
 export function activate(context: vscode.ExtensionContext) {
   extensionPath = context.extensionPath;
   client = createClient();
+  resourceViewProvider = new ResourceViewProvider(context.extensionUri);
+  resourceViewProvider.setClient(client);
+  resourceViewProvider.markScanStarted();
 
   client
     .start()
@@ -143,8 +146,6 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.showErrorMessage(`Failed to start Infracost language server: ${error}`);
     });
 
-  resourceViewProvider = new ResourceViewProvider(context.extensionUri);
-  resourceViewProvider.setClient(client);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(ResourceViewProvider.viewType, resourceViewProvider),
   );
@@ -178,7 +179,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (!editor) {
-        resourceViewProvider.update({ scanning: false });
+        resourceViewProvider.showTree();
       }
     }),
   );
@@ -434,6 +435,7 @@ export function activate(context: vscode.ExtensionContext) {
           pendingLogin = undefined;
           client = createClient();
           resourceViewProvider.setClient(client);
+          resourceViewProvider.markScanStarted();
           await client.start();
           await setupClient(client);
         },
@@ -466,7 +468,7 @@ async function setupClient(c: LanguageClient): Promise<void> {
   c.onNotification('infracost/loginComplete', () => {
     pendingLogin = undefined;
     hasShownOrgSelector = false;
-    resourceViewProvider.update({ scanning: true });
+    resourceViewProvider.markScanStarted();
   });
   c.onNotification('infracost/logoutComplete', () => {
     resourceViewProvider.showLogin();
@@ -495,12 +497,16 @@ async function checkAuthStatus() {
 
     if (result.needsLogin) {
       resourceViewProvider.showLogin();
+    } else if (result.scanning) {
+      resourceViewProvider.markScanStarted();
     } else if (!result.scanning) {
       // If not scanning and not needing login, show empty state
+      resourceViewProvider.markScanComplete();
       resourceViewProvider.update({ scanning: false });
     }
   } catch {
     // If auth check fails, show empty state instead of staying in scanning
+    resourceViewProvider.markScanComplete();
     resourceViewProvider.update({ scanning: false });
   }
 }
@@ -509,6 +515,7 @@ async function handleScanComplete() {
   if (!client) {
     return;
   }
+  resourceViewProvider.markScanComplete();
 
   // Refresh org info after each scan — user.json is populated by this point.
   try {
@@ -536,7 +543,7 @@ async function handleScanComplete() {
       if (statusOutcome) {
         resourceViewProvider.setGuardrails(statusOutcome.triggeredGuardrails ?? []);
       }
-      resourceViewProvider.update({ scanning: false });
+      resourceViewProvider.showTree();
       return;
     }
 
@@ -545,7 +552,7 @@ async function handleScanComplete() {
       if (statusOutcome) {
         resourceViewProvider.setGuardrails(statusOutcome.triggeredGuardrails ?? []);
       }
-      resourceViewProvider.update({ scanning: false });
+      resourceViewProvider.showTree();
       return;
     }
 

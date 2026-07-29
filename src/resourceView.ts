@@ -48,6 +48,8 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
 
   private guardrails: GuardrailStatus[] = [];
 
+  private hasCompletedScan = false;
+
   private codiconUri?: string;
 
   private cspSource?: string;
@@ -82,6 +84,7 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
       fileIconUris: this.fileIconUris,
       orgInfo: this.orgInfo,
       guardrails: this.guardrails,
+      scanComplete: this.hasCompletedScan,
     };
   }
 
@@ -110,7 +113,11 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
       yml: iconUri('yaml.svg'),
       json: iconUri('json.svg'),
     };
-    this.view.webview.html = this.pendingHtml ?? renderEmpty([], this.renderOpts);
+    if (this.pendingHtml) {
+      this.view.webview.html = this.pendingHtml;
+    } else {
+      this.showTree();
+    }
     this.pendingHtml = undefined;
 
     webviewView.webview.onDidReceiveMessage((msg) => {
@@ -201,10 +208,22 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
     return Boolean(this.lastData?.resource);
   }
 
+  markScanStarted(): void {
+    this.hasCompletedScan = false;
+    this.update({ scanning: true });
+  }
+
+  markScanComplete(): void {
+    this.hasCompletedScan = true;
+    if (this.lastData?.scanning) {
+      this.lastData = { scanning: false };
+    }
+  }
+
   update(data: ResourceDetailsResult): void {
     this.lastData = data;
     if (!data.resource && !data.needsLogin && !data.scanning) {
-      this.fetchAndRenderTree();
+      this.showTree();
       return;
     }
     this.setHtml(renderResult(data, isCopilotAvailable(), this.renderOpts));
@@ -214,6 +233,22 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
     if (this.lastData?.resource || this.lastData?.needsLogin || this.lastData?.scanning) {
       return;
     }
+    this.showTree();
+  }
+
+  showTree(): void {
+    if (!this.client) {
+      this.lastData = { scanning: false };
+      this.setHtml(renderEmpty([], this.renderOpts));
+      return;
+    }
+
+    if (!this.hasCompletedScan || this.lastData?.scanning) {
+      this.update({ scanning: true });
+      return;
+    }
+
+    this.lastData = { scanning: false };
     this.fetchAndRenderTree();
   }
 
@@ -252,12 +287,37 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
       this.setHtml(renderEmpty([], this.renderOpts));
       return;
     }
+
+    if (!this.hasCompletedScan || this.lastData?.scanning) {
+      this.update({ scanning: true });
+      return;
+    }
+
     this.client
-      .sendRequest<WorkspaceSummaryResult>('infracost/workspaceSummary')
+      .sendRequest<WorkspaceSummaryResult>('infracost/workspaceSummary', {})
       .then((result) => {
-        this.setHtml(renderEmpty(result?.files ?? [], this.renderOpts, result?.tree ?? []));
+        const files = result?.files ?? [];
+        const tree = result?.tree ?? [];
+        if (files.length > 0 || tree.length > 0) {
+          this.setHtml(renderEmpty(files, this.renderOpts, tree));
+          return;
+        }
+
+        this.client
+          ?.sendRequest<StatusInfo>('infracost/status')
+          .then((status) => {
+            if (status.scanning) {
+              this.markScanStarted();
+              return;
+            }
+            this.setHtml(renderEmpty(files, this.renderOpts, tree));
+          })
+          .catch(() => {
+            this.setHtml(renderEmpty(files, this.renderOpts, tree));
+          });
       })
-      .catch(() => {
+      .catch((err) => {
+        this.client?.outputChannel.appendLine(`infracost/workspaceSummary: ${err}`);
         this.setHtml(renderEmpty([], this.renderOpts));
       });
   }

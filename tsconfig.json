@@ -8,6 +8,9 @@
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,
+		"types": [
+			"node"
+		],
 	},
 	"include": ["src"]
 }

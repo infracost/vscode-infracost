@@ -9,6 +9,9 @@ module.exports = {
   plugins: ['@typescript-eslint'],
   settings: {
     'import/resolver': {
+      typescript: {
+        alwaysTryTypes: true,
+      },
       node: {
         paths: ['src'],
         extensions: ['.ts', '.js'],

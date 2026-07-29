@@ -130,6 +130,7 @@ export interface RenderOptions {
   fileIconUris?: Record<string, string>;
   orgInfo?: OrgInfo;
   guardrails?: GuardrailStatus[];
+  scanComplete?: boolean;
 }
 
 const STYLES = `
@@ -722,6 +723,7 @@ ${renderFooterLinks()}
   var FILES = ${filesJson};
   var SERVER_TREE = ${treeJson};
   var FILE_ICONS = ${JSON.stringify(opts?.fileIconUris ?? {})};
+  var SCAN_COMPLETE = ${opts?.scanComplete === true ? 'true' : 'false'};
   var TREE = null;
   var vs = window.__vscode;
   var savedState = vs ? vs.getState() : null;
@@ -785,7 +787,7 @@ ${renderFooterLinks()}
     if (FILES.length === 0 || (isFiltering && nodes.length === 0)) {
       var msg = document.createElement('div');
       msg.className = 'state';
-      msg.textContent = FILES.length === 0 ? 'No resources found' : 'No matches';
+      msg.textContent = FILES.length === 0 ? (SCAN_COMPLETE ? 'No resources found' : 'Scanning...') : 'No matches';
       root.appendChild(msg);
     } else {
       renderNodes(nodes, root, 0, forceExpand);

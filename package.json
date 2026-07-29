@@ -329,7 +329,8 @@
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-import": "^2.26.0",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.5.5",
     "ovsx": "^0.10.11",
     "prettier": "^3.8.3",
@@ -342,7 +343,6 @@
     "@vscode/codicons": "^0.0.45",
     "fast-uri": "^3.1.4",
     "flatted": "^3.4.2",
-    "vscode-languageclient": "^9.0.1",
-    "vscode-languageserver-protocol": "^3.17.5"
+    "vscode-languageclient": "^10.1.0"
   }
 }
