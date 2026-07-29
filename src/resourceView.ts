@@ -54,8 +54,6 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
 
   private fileIconUris: Record<string, string> = {};
 
-  private suppressSelectionDetailsUntil = 0;
-
   private readonly extensionUri: vscode.Uri;
 
   constructor(extensionUri: vscode.Uri) {
@@ -149,7 +147,6 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
           if (!msg.uri) {
             break;
           }
-          this.suppressSelectionDetailsUntil = Date.now() + 750;
           vscode.commands.executeCommand(
             'infracost.openResourceLocation',
             msg.uri,
@@ -200,8 +197,8 @@ export class ResourceViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  shouldSuppressSelectionDetails(): boolean {
-    return Date.now() < this.suppressSelectionDetailsUntil;
+  isShowingResourceDetails(): boolean {
+    return Boolean(this.lastData?.resource);
   }
 
   update(data: ResourceDetailsResult): void {

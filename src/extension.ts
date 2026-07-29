@@ -203,8 +203,12 @@ export function activate(context: vscode.ExtensionContext) {
         clearTimeout(debounceTimer);
       }
 
+      if (!resourceViewProvider.isShowingResourceDetails()) {
+        return;
+      }
+
       debounceTimer = setTimeout(async () => {
-        if (!client || resourceViewProvider.shouldSuppressSelectionDetails()) {
+        if (!client || !resourceViewProvider.isShowingResourceDetails()) {
           return;
         }
 
@@ -526,6 +530,15 @@ async function handleScanComplete() {
   }
   try {
     const statusPromise = client.sendRequest<StatusInfo>('infracost/status');
+
+    if (!resourceViewProvider.isShowingResourceDetails()) {
+      const statusOutcome = await statusPromise.catch(() => null);
+      if (statusOutcome) {
+        resourceViewProvider.setGuardrails(statusOutcome.triggeredGuardrails ?? []);
+      }
+      resourceViewProvider.update({ scanning: false });
+      return;
+    }
 
     if (!editor) {
       const statusOutcome = await statusPromise.catch(() => null);
