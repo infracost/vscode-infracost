@@ -321,7 +321,7 @@
     "format:check": "prettier --check 'src/**/*.{js,ts}'"
   },
   "devDependencies": {
-    "@types/node": "25.x",
+    "@types/node": "26.x",
     "@types/vscode": "1.100.0",
     "@typescript-eslint/eslint-plugin": "^8.59.1",
     "@typescript-eslint/parser": "^8.59.1",
