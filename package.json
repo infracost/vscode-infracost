@@ -335,7 +335,7 @@
     "ovsx": "^0.10.11",
     "prettier": "^3.8.3",
     "ts-loader": "^9.5.7",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "webpack": "^5.77.0",
     "webpack-cli": "^7.0.2"
   },
