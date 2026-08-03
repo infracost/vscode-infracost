@@ -54,7 +54,7 @@
     "views": {
       "infracost": [
         {
-          "icon": "infracost-logo.png",
+          "icon": "resources/icon.svg",
           "type": "webview",
           "id": "infracost.resourceDetails",
           "name": "Explorer"
