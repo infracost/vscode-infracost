@@ -332,7 +332,7 @@
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.5.5",
-    "ovsx": "^0.10.11",
+    "ovsx": "^1.1.0",
     "prettier": "^3.8.3",
     "ts-loader": "^9.5.7",
     "typescript": "^6.0.3",
