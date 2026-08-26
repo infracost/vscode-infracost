@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
+  DocumentFilter,
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
@@ -79,11 +80,25 @@ function getLspProxySettings():
   };
 }
 
+// isBicepEnabled resolves the Bicep setting against Workspace Trust.
+//
+// Pricing Bicep runs the Bicep compiler over the workspace and lets it restore
+// modules from whatever registries the files name, so it is workspace code
+// execution in the sense Workspace Trust exists to gate. The setting is
+// machine-scoped, so a repository cannot turn it on by shipping workspace
+// settings — but a user who turned it on for their own repositories should not
+// have it silently apply the first time they open someone else's, so an
+// untrusted workspace forces it back off regardless.
+function isBicepEnabled(config: vscode.WorkspaceConfiguration): boolean {
+  return config.get<boolean>('enableBicep', false) && vscode.workspace.isTrusted;
+}
+
 function createClient(): LanguageClient {
   const config = vscode.workspace.getConfiguration('infracost');
   const serverPath = config.get<string>('serverPath') || resolveServerPath(extensionPath);
   const currency = config.get<string>('currency', 'USD');
   const checkForUpdates = config.get<boolean>('checkForUpdates', true);
+  const enableBicep = isBicepEnabled(config);
 
   const baseEnv = { ...process.env } as Record<string, string>;
   const serverEnv: Record<string, string> = {
@@ -105,12 +120,25 @@ function createClient(): LanguageClient {
     options: { env: serverEnv },
   };
 
+  const documentSelector: DocumentFilter[] = [
+    { scheme: 'file', language: 'terraform' },
+    { scheme: 'file', language: 'yaml' },
+    { scheme: 'file', language: 'json' },
+  ];
+
+  if (enableBicep) {
+    // Matched by pattern rather than language id: the `bicep` language id only
+    // exists when Microsoft's Bicep extension is installed, and Infracost
+    // shouldn't require it. Added only when the setting is on, so with Bicep
+    // off the server is never handed documents its plugin would ignore.
+    documentSelector.push(
+      { scheme: 'file', pattern: '**/*.bicep' },
+      { scheme: 'file', pattern: '**/*.bicepparam' },
+    );
+  }
+
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [
-      { scheme: 'file', language: 'terraform' },
-      { scheme: 'file', language: 'yaml' },
-      { scheme: 'file', language: 'json' },
-    ],
+    documentSelector,
     synchronize: {
       configurationSection: 'infracost',
     },
@@ -120,11 +148,66 @@ function createClient(): LanguageClient {
         vscode.extensions.getExtension('Infracost.infracost')?.packageJSON?.version ?? 'unknown',
       currency,
       checkForUpdates,
+      // Always sent, both true and false: the server treats an explicit value as
+      // the user's decision and an omitted one as "whatever the environment
+      // says". Omitting false would let an INFRACOST_ENABLE_BICEP exported
+      // upstream of VS Code keep Bicep on for a user who has it switched off.
+      enableBicep,
       proxy: getLspProxySettings(),
     },
   };
 
   return new LanguageClient('infracost', 'Infracost', serverOptions, clientOptions);
+}
+
+// bicepHintKey marks that the "Bicep files detected" nudge has been shown. It's
+// global rather than per-workspace: the setting it points at is machine-scoped,
+// so once a user has answered the question they've answered it for every
+// repository, and re-asking per workspace would just be nagging.
+const bicepHintKey = 'infracost.bicepHintShown';
+
+// maybeShowBicepHint tells a user with Bicep files that Infracost can price
+// them, once, and only when it can't already. Nothing discoverable points at a
+// default-off setting otherwise: with the gate off `.bicep` files simply show no
+// costs, which is indistinguishable from Infracost not supporting them.
+async function maybeShowBicepHint(context: vscode.ExtensionContext): Promise<void> {
+  if (context.globalState.get<boolean>(bicepHintKey)) {
+    return;
+  }
+
+  const config = vscode.workspace.getConfiguration('infracost');
+  if (config.get<boolean>('enableBicep', false)) {
+    return;
+  }
+
+  // Untrusted workspaces are excluded deliberately: the setting wouldn't take
+  // effect there anyway, and prompting about someone else's unvetted repository
+  // is the wrong moment to suggest running a compiler over it.
+  if (!vscode.workspace.isTrusted || vscode.workspace.workspaceFolders === undefined) {
+    return;
+  }
+
+  const found = await vscode.workspace.findFiles('**/*.bicep', '**/node_modules/**', 1);
+  if (found.length === 0) {
+    return;
+  }
+
+  // Recorded before the prompt is answered — a dismissed notification is an
+  // answer, and this must not come back on every window.
+  await context.globalState.update(bicepHintKey, true);
+
+  const choice = await vscode.window.showInformationMessage(
+    'Bicep files detected. Infracost can show cost estimates for them — this requires the Bicep CLI and downloads any modules they reference.',
+    'Enable',
+    'Not now',
+  );
+  if (choice !== 'Enable') {
+    return;
+  }
+
+  // Global target, matching the setting's machine scope — a workspace-targeted
+  // update would be rejected.
+  await config.update('enableBicep', true, vscode.ConfigurationTarget.Global);
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -149,6 +232,10 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(ResourceViewProvider.viewType, resourceViewProvider),
   );
+
+  maybeShowBicepHint(context).catch(() => {
+    // A discovery nudge is never worth surfacing a failure for.
+  });
 
   // Move the sidebar view to the secondary sidebar on first install.
   const movedKey = 'infracost.resourceDetailsMoved';
@@ -185,9 +272,30 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.workspace.onDidChangeConfiguration((e) => {
+    vscode.workspace.onDidChangeConfiguration(async (e) => {
       if (e.affectsConfiguration('infracost.displayRemoteModulesInTree')) {
         resourceViewProvider.refreshTree();
+      }
+
+      // The Bicep setting reaches the parser plugin through the language
+      // server's environment, which is read once when the plugin subprocess
+      // starts, so changing it does nothing until the server is restarted.
+      // Restart without asking: the user just changed a setting that is inert
+      // until this happens, and the restart shows its own progress notification.
+      if (e.affectsConfiguration('infracost.enableBicep')) {
+        await vscode.commands.executeCommand('infracost.restartLsp');
+      }
+    }),
+  );
+
+  // Trusting a workspace can flip the setting's effective value (see
+  // isBicepEnabled), so restart to pick it up. No prompt here: the user just
+  // made a deliberate trust decision, and the alternative is a trusted
+  // workspace that silently keeps ignoring the setting.
+  context.subscriptions.push(
+    vscode.workspace.onDidGrantWorkspaceTrust(async () => {
+      if (vscode.workspace.getConfiguration('infracost').get<boolean>('enableBicep', false)) {
+        await vscode.commands.executeCommand('infracost.restartLsp');
       }
     }),
   );
@@ -448,6 +556,9 @@ function isSupportedFile(fsPath: string): boolean {
   const lower = fsPath.toLowerCase();
   if (lower.endsWith('.tf') || lower.endsWith('.hcl')) {
     return true;
+  }
+  if (lower.endsWith('.bicep') || lower.endsWith('.bicepparam')) {
+    return isBicepEnabled(vscode.workspace.getConfiguration('infracost'));
   }
   return lower.endsWith('.yml') || lower.endsWith('.yaml') || lower.endsWith('.json');
 }
