@@ -9,6 +9,7 @@ import {
   Trace,
   TransportKind,
 } from 'vscode-languageclient/node';
+import { serverLogChannel, logLevelMethod } from './logChannel';
 import { ResourceViewProvider, ResourceDetailsResult, OrgInfo } from './resourceView';
 import { StatusInfo } from './resourceHtml';
 
@@ -122,6 +123,7 @@ function createClient(): LanguageClient {
       checkForUpdates,
       proxy: getLspProxySettings(),
     },
+    outputChannel: serverLogChannel(),
   };
 
   return new LanguageClient('infracost', 'Infracost', serverOptions, clientOptions);
@@ -461,7 +463,7 @@ async function setupClient(c: LanguageClient): Promise<void> {
     'infracost/log',
     (params: { level?: string; message?: string; fields?: Record<string, unknown> }) => {
       const fields = params.fields ? ` ${JSON.stringify(params.fields)}` : '';
-      c.outputChannel.appendLine(`[${params.level ?? 'info'}] ${params.message ?? ''}${fields}`);
+      logLevelMethod(c.outputChannel, params.level)(`${params.message ?? ''}${fields}`);
     },
   );
   c.onNotification('infracost/scanComplete', handleScanComplete);
