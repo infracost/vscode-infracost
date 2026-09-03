@@ -2,7 +2,7 @@
   "name": "infracost",
   "displayName": "Infracost",
   "description": "Cloud cost estimates for Terraform in your editor",
-  "version": "0.4.17",
+  "version": "0.4.18",
   "author": "Infracost",
   "publisher": "Infracost",
   "license": "Apache-2.0",
@@ -321,28 +321,28 @@
     "format:check": "prettier --check 'src/**/*.{js,ts}'"
   },
   "devDependencies": {
-    "@types/node": "25.x",
+    "@types/node": "^25.9.5",
     "@types/vscode": "1.100.0",
-    "@typescript-eslint/eslint-plugin": "^8.59.1",
-    "@typescript-eslint/parser": "^8.59.1",
-    "@vscode/vsce": "^3.9.1",
+    "@typescript-eslint/eslint-plugin": "^8.69.0",
+    "@typescript-eslint/parser": "^8.69.0",
+    "@vscode/vsce": "^3.9.2",
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-prettier": "^5.5.5",
-    "ovsx": "^0.10.11",
-    "prettier": "^3.8.3",
-    "ts-loader": "^9.5.7",
+    "eslint-plugin-prettier": "^5.5.6",
+    "ovsx": "^0.10.12",
+    "prettier": "^3.9.6",
+    "ts-loader": "^9.6.2",
     "typescript": "^6.0.3",
-    "webpack": "^5.77.0",
-    "webpack-cli": "^7.0.2"
+    "webpack": "^5.110.3",
+    "webpack-cli": "^7.2.3"
   },
   "dependencies": {
     "@vscode/codicons": "^0.0.45",
-    "fast-uri": "^3.1.4",
-    "flatted": "^3.4.2",
-    "vscode-languageclient": "^10.1.0"
+    "fast-uri": "^3.1.7",
+    "flatted": "^3.4.4",
+    "vscode-languageclient": "^10.1.1"
   }
 }
