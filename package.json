@@ -37,7 +37,8 @@
       "supported": "limited",
       "restrictedConfigurations": [
         "infracost.serverPath",
-        "infracost.debugUI"
+        "infracost.debugUI",
+        "infracost.enableBicep"
       ]
     }
   },
@@ -94,6 +95,12 @@
           "type": "boolean",
           "default": true,
           "description": "Check for updates to the bundled Infracost language server."
+        },
+        "infracost.enableBicep": {
+          "scope": "machine",
+          "type": "boolean",
+          "default": false,
+          "description": "Show cost estimates for Bicep files. Requires the Bicep CLI on your PATH. Estimating a Bicep file compiles it, which downloads any modules it references from their registries. User-level setting only: a repository cannot enable this, and it stays off in untrusted workspaces."
         },
         "infracost.currency": {
           "type": "string",
