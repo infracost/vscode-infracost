@@ -324,7 +324,7 @@
     "@types/node": "^25.9.5",
     "@types/vscode": "1.100.0",
     "@typescript-eslint/eslint-plugin": "^8.69.0",
-    "@typescript-eslint/parser": "^8.69.0",
+    "@typescript-eslint/parser": "^8.70.0",
     "@vscode/vsce": "^3.9.2",
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
