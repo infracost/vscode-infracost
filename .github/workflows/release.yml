@@ -109,8 +109,24 @@ jobs:
       id-token: write
     if: success() && startsWith( github.ref, 'refs/tags/v')
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
       - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
       - name: Publish to VS Marketplace
-        run: npx --yes @vscode/vsce@4 publish --oidc --packagePath $(find . -iname '*.vsix')
+        run: npx vsce publish --oidc --packagePath $(find artifacts -iname '*.vsix')
+
       - name: Publish to OpenVSX
-        run: find . -iname '*.vsix' -exec npx --yes ovsx@1 publish --trusted-publishing {} \;
+        run: npx ovsx publish --trusted-publishing --packagePath $(find artifacts -iname '*.vsix')
