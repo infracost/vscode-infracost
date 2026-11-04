@@ -113,4 +113,4 @@ jobs:
       - name: Publish to VS Marketplace
         run: npx --yes @vscode/vsce@4 publish --oidc --packagePath $(find . -iname '*.vsix')
       - name: Publish to OpenVSX
-        run: find . -iname '*.vsix' -exec npx ovsx publish {} -p ${{ secrets.OPEN_VSX_PAT }} \;
+        run: find . -iname '*.vsix' -exec npx --yes ovsx@1 publish --trusted-publishing {} \;
