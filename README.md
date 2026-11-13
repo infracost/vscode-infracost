@@ -107,8 +107,17 @@ Open a workspace containing Terraform files. The extension will start the langua
 | `infracost.displayRemoteModulesInTree` | Show resources from remote modules in the Explorer tree. Remote module sources cannot be opened from the tree. | `false`   |
 | `infracost.checkForUpdates`            | Check for updates to the bundled Infracost language server.                                                    | `true`    |
 | `infracost.runParamsCacheTTLSeconds`   | How long (in seconds) to cache run parameters between API calls. Set to 0 to disable.                          | `300`     |
+| `infracost.enableBicep`                | Show cost estimates for Bicep files. User-level setting only; off in untrusted workspaces.                     | `false`   |
 
 The extension also passes VS Code's `http.proxy` setting to the bundled language server when `HTTP_PROXY`/`HTTPS_PROXY` environment variables are not already set.
+
+### Bicep
+
+Bicep cost estimates are off by default, because estimating a Bicep file compiles it — which requires the [Bicep CLI](https://aka.ms/bicep-install) on your `PATH` and downloads any modules the file references from their registries. Turn it on with `infracost.enableBicep` and restart the language server when prompted.
+
+`infracost.enableBicep` is machine-scoped: it can only be set in your own user settings, so a repository cannot enable it by shipping workspace settings. It also stays off in workspaces you have not trusted, and takes effect as soon as you grant trust.
+
+With the setting off, `.bicep` and `.bicepparam` files show no costs. ARM JSON — including JSON a Bicep build produced — is estimated either way.
 
 ## Commands
 
