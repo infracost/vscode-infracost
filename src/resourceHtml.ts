@@ -1169,7 +1169,7 @@ function renderResource(r: ResourceDetail, copilotAvailable: boolean): string {
           r.monthlyCost,
         )}/mo</span></summary>
         <table>
-          <thead><tr><th>Component</th><th>Qty</th><th>Price</th><th>Monthly</th></tr></thead>
+          <thead><tr><th>Component</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Monthly</th></tr></thead>
           <tbody>
             ${r.costComponents
               .map(
