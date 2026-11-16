@@ -322,7 +322,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.1",
-    "@types/vscode": "1.100.0",
+    "@types/vscode": "1.146.0",
     "@typescript-eslint/eslint-plugin": "^8.72.1",
     "@typescript-eslint/parser": "^8.72.1",
     "@vscode/vsce": "4.1.0",
